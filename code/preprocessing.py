@@ -12,6 +12,7 @@ def clean_data(fname, index_lst):
     coef = 1
     for dof, idx_pair in index_lst.items():
         if dof == 'z':
+            # The z-values for the measured signal is flipped for some reason
             coef = -1
         else:
             coef = 1
@@ -22,12 +23,19 @@ def clean_data(fname, index_lst):
         
         offset = find_offset(df, idx_pair)
         df.loc[:, idx_pair[1]] = coef*(df.loc[:, idx_pair[1]] + offset)
-        
+
+        # Find the lag in terms of a row difference in input/output functions
         _, cmd_row_idx, mes_row_idx = find_lag(df, idx_pair)
-        lag = mes_row_idx-cmd_row_idx-1
+        lag = mes_row_idx-cmd_row_idx
         
         # Shift measurement signal up to account for input lag
         df.loc[:, idx_pair[1]] = df.loc[:, idx_pair[1]].shift(-lag)
+        
+        # Account for offset again just to ensure perfect data match
+        offset = find_offset(df, idx_pair)
+        df.loc[:, idx_pair[1]] = (df.loc[:, idx_pair[1]] + offset)
+        
+        
     
     # Remove NaN values that would come from the measurement shift
     df.dropna(inplace=True)
@@ -45,6 +53,7 @@ def find_offset(df, idx_pair):
     '''
     avg_offset = 0
     
+    # Average out positional offset forthe first three datapoints
     for i in range(1,4):
         avg_offset += (-1*df.loc[i, idx_pair[0]]) - df.loc[i, idx_pair[1]]
     avg_offset = avg_offset/3
@@ -53,11 +62,12 @@ def find_offset(df, idx_pair):
 
 def plot_dof(df, idx_pair, interval=None):
     '''
-    Plot position, velocity & acceleration corresponding to a specified DoF for both commanded and measured data.
+    Plot position, velocity & acceleration corresponding to a specified DoF for both commanded and measured data. 
     '''
     if interval == None:
         interval = list(range(0, df.shape[0]))
     
+    ### CHANGE TO REAL CMD VELOCITY AND ACCELERATION INSTEAD OF TAKING DERIVATIVES
     # Numerical derivatives of var_1
     vel_1 = np.gradient(df.loc[interval, idx_pair[0]], df.loc[interval, 0])
     acc_1 = np.gradient(vel_1, df.loc[interval, 0])
@@ -98,27 +108,33 @@ def find_lag(df, idx_pair):
     '''
     Determine the fixed delay between input and output signals using the commanded and measured velocities.
     '''
-    vel_cmd = np.gradient(df.loc[:, idx_pair[0]], df.loc[:, 0])
-    vel_mes = -1*np.gradient(df.loc[:, idx_pair[1]], df.loc[:, 0])
+    #vel_cmd = np.gradient(df.loc[:, idx_pair[0]], df.loc[:, 0])
+    #vel_mes = -1*np.gradient(df.loc[:, idx_pair[1]], df.loc[:, 0])
+    pos_cmd = df.loc[:, idx_pair[0]]
+    pos_mes = df.loc[:, idx_pair[1]]
     cmd_zero = False
-    for i in range(len(vel_cmd)-1):
-        
-        if (vel_cmd[i] * vel_cmd[i+1] < 0) and not cmd_zero:
+    
+    for i in range(len(pos_cmd)-1):
+        # Ticker starts once zero position identified on cmd signal
+        if (pos_cmd[i] * pos_cmd[i+1] < 0) and not cmd_zero:
             cmd_zero = True
             ticker_start = df.loc[i, 0]
             cmd_row_idx = i
             print(f"CMD zero @ {df.loc[i, 0]}\nRows: {i}-{i+1}")
-        if (vel_mes[i] * vel_mes[i+1] < 0)  and cmd_zero:
+            
+        # Ticker stops once zero position identified on mes signal
+        if (pos_mes[i] * pos_mes[i+1] < 0)  and cmd_zero:
             ticker_end = df.loc[i, 0]
             mes_row_idx = i
             print(f"MES zero @ {df.loc[i, 0]}\nRows: {i}-{i+1}")
             break
+    # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
     return ticker_end-ticker_start, cmd_row_idx, mes_row_idx 
 
 index_match = {"x": (38, 74), "y": (39, 75), "z": (40, 76), "phi": (41, 77), "theta": (42,78), "psi": (43, 79)}
 
-data = clean_data('data/log/motion240301-bump.log', index_match)
-#data_range  = list(range(10,528))
-data_range = list(range(10, 1000))
-plot_dof(data, index_match['x'], interval=data_range)
+data = clean_data('data/log/motion240301-pmd.log', index_match)
+data_range  = list(range(10,528))
+#data_range = list(range(5000, 6000))
+plot_dof(data, index_match['z'], interval=data_range)
 
