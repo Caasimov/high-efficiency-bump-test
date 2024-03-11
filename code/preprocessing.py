@@ -7,17 +7,49 @@ def clean_data(fname, index_lst):
     Clean data from .log files and return a pandas dataframe
     '''
     df = pd.read_csv(fname, sep='\s+', engine='python', header=None)
-    z_offset = find_offset(df, index_lst['z'])
-    df.loc[:, index_lst['z'][1]] = -1*(df.loc[:, index_lst['z'][1]] + z_offset)
+
+    # Ensure constant measurement offsets & input lag is corrected
+    coef = 1
+    for dof, idx_pair in index_lst.items():
+        if dof == 'z':
+            coef = -1
+        else:
+            coef = 1
+        ### START BREAK-OUT LOGIC: REMOVE ONCE ROT CMD DATA CLARIFIED ###
+        if dof == 'phi':
+            break
+        ### END BREAK-OUT LOGIC: REMOVE ONCE ROT CMD DATA CLARIFIED ###
+        
+        offset = find_offset(df, idx_pair)
+        df.loc[:, idx_pair[1]] = coef*(df.loc[:, idx_pair[1]] + offset)
+        
+        _, cmd_row_idx, mes_row_idx = find_lag(df, idx_pair)
+        lag = mes_row_idx-cmd_row_idx-1
+        
+        # Shift measurement signal up to account for input lag
+        df.loc[:, idx_pair[1]] = df.loc[:, idx_pair[1]].shift(-lag)
+    
+    # Remove NaN values that would come from the measurement shift
+    df.dropna(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    # ASK RENE: ISSUE WITH PMD CMD SIGNAL IDX KEY >= 41  (PHI, THETA, PSI), COL = 0
+    # Filter out columns full of zeroes        
+    #df = df.loc[:, ~(df == 0).all()]
+       
     return df
 
 def find_offset(df, idx_pair):
     '''
     Determine positional/rotational system offset for a specified DoF between commanded and measured data.
     '''
-    offset = (-1*df.loc[1, idx_pair[0]]) - df.loc[2, idx_pair[1]]
+    avg_offset = 0
     
-    return offset
+    for i in range(1,4):
+        avg_offset += (-1*df.loc[i, idx_pair[0]]) - df.loc[i, idx_pair[1]]
+    avg_offset = avg_offset/3
+    
+    return avg_offset
 
 def plot_dof(df, idx_pair, interval=None):
     '''
@@ -64,30 +96,29 @@ def plot_dof(df, idx_pair, interval=None):
 
 def find_lag(df, idx_pair):
     '''
-    Determine the fixed delay between input and ouput signals using the commanded and measured velocities.
+    Determine the fixed delay between input and output signals using the commanded and measured velocities.
     '''
     vel_cmd = np.gradient(df.loc[:, idx_pair[0]], df.loc[:, 0])
     vel_mes = -1*np.gradient(df.loc[:, idx_pair[1]], df.loc[:, 0])
-    cmd_zero, mes_zero = False, False
+    cmd_zero = False
     for i in range(len(vel_cmd)-1):
         
         if (vel_cmd[i] * vel_cmd[i+1] < 0) and not cmd_zero:
             cmd_zero = True
             ticker_start = df.loc[i, 0]
-            print(f"CMD zero @ {df.loc[i, 0]}\nRows: {i+1}-{i+2}")
-        if (vel_mes[i] * vel_mes[i+1] < 0) and not mes_zero and cmd_zero:
-            mes_zero = True
+            cmd_row_idx = i
+            print(f"CMD zero @ {df.loc[i, 0]}\nRows: {i}-{i+1}")
+        if (vel_mes[i] * vel_mes[i+1] < 0)  and cmd_zero:
             ticker_end = df.loc[i, 0]
-            print(f"MES zero @ {df.loc[i, 0]}\nRows: {i+1}-{i+2}")
+            mes_row_idx = i
+            print(f"MES zero @ {df.loc[i, 0]}\nRows: {i}-{i+1}")
             break
-    return ticker_end-ticker_start 
+    return ticker_end-ticker_start, cmd_row_idx, mes_row_idx 
 
 index_match = {"x": (38, 74), "y": (39, 75), "z": (40, 76), "phi": (41, 77), "theta": (42,78), "psi": (43, 79)}
 
-data = clean_data('data/log/motion240301-pmd.log', index_match)
-data_range  = list(range(10,528))
-#data_range = list(range(5000, 6000))
-plot_dof(data, index_match['z'])
-lag = find_lag(data, index_match['z'])/1e4
-print(f"Input lag: {lag} s")
-print(f"MES pos offset: {find_offset(data, index_match['z'])}")
+data = clean_data('data/log/motion240301-bump.log', index_match)
+#data_range  = list(range(10,528))
+data_range = list(range(10, 1000))
+plot_dof(data, index_match['x'], interval=data_range)
+
