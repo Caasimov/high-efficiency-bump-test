@@ -69,12 +69,12 @@ def plot_dof(df, idx_pair, interval=None):
     
     ### CHANGE TO REAL CMD VELOCITY AND ACCELERATION INSTEAD OF TAKING DERIVATIVES
     # Numerical derivatives of var_1
-    vel_1 = np.gradient(df.loc[interval, idx_pair[0]], df.loc[interval, 0])
-    acc_1 = np.gradient(vel_1, df.loc[interval, 0])
+    vel_1 = df.loc[interval, idx_pair[0]+6]
+    acc_1 = df.loc[interval, idx_pair[0]+12]
     
     # Numerical derivatives of var_2
-    vel_2 = np.gradient(df.loc[interval, idx_pair[1]], df.loc[interval, 0])
-    acc_2 = np.gradient(vel_2, df.loc[interval, 0])
+    vel_2 = np.gradient(df.loc[interval, idx_pair[1]], df.loc[interval, 0])*10**4
+    acc_2 = np.gradient(vel_2, df.loc[interval, 0])*10**4
     
     fig, axs = plt.subplots(3, 1, figsize=(10,10))
 
