@@ -65,8 +65,7 @@ for i in range(0, len(extracted_data)):
     if len(extracted_data[i][3]) == 1:
         combined_t_values.extend(create_sine(extracted_data[i][0], extracted_data[i][1], extracted_data[i][2], extracted_data[i][3][0], extracted_data[i][4][0], extracted_data[i][5][0])[0])
         combined_sine_function.extend(create_sine(extracted_data[i][0], extracted_data[i][1], extracted_data[i][2], extracted_data[i][3][0], extracted_data[i][4][0], extracted_data[i][5][0])[1])
-        dt_values= [extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]]
-        dt_values.append(dt_values)
+        dt_values.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])
         
     else:
         for j in range(len(extracted_data[i][3])):
@@ -76,7 +75,7 @@ for i in range(0, len(extracted_data)):
         combined_sine_function.extend([sum(samples) for samples in zip(*sine_functions)])
         combined_t_values.extend(t_values)
 
-        dt_values= [extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]]
+        dt_values.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])
 
 # Plot the combined sine function
 plt.plot(combined_t_values, combined_sine_function)
