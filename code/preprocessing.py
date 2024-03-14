@@ -136,5 +136,5 @@ index_match = {"x": (38, 74), "y": (39, 75), "z": (40, 76), "phi": (41, 77), "th
 data = clean_data('data/log/motion240301-pmd.log', index_match)
 data_range  = list(range(10,528))
 #data_range = list(range(5000, 6000))
-plot_dof(data, index_match['z'], interval=data_range)
+plot_dof(data, index_match['z'])
 
