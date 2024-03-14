@@ -1,12 +1,29 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import h5py
+
+def load_log_file(fname):
+    '''
+    Load a log file into a pandas dataframe
+    '''
+    df = pd.read_csv(fname, sep='\s+', engine='python', header=None)
+    return df
+
+def load_hdf5_file(fname):
+    '''
+    Load a hdf5 file into a pandas dataframe
+    '''
+    with h5py.File(fname, 'r') as f:
+        data = f['data'][:]
+        df = pd.DataFrame(data)
+    print(df.head())
 
 def clean_data(fname, index_lst):
     '''
     Clean data from .log files and return a pandas dataframe
     '''
-    df = pd.read_csv(fname, sep='\s+', engine='python', header=None)
+    df = load_log_file(fname)
 
     # Ensure constant measurement offsets & input lag is corrected
     coef = 1
@@ -21,21 +38,27 @@ def clean_data(fname, index_lst):
             break
         ### END BREAK-OUT LOGIC: REMOVE ONCE ROT CMD DATA CLARIFIED ###
         
-        offset = find_offset(df, idx_pair)
-        df.loc[:, idx_pair[1]] = coef*(df.loc[:, idx_pair[1]] + offset)
+        # Iteratively correct offset and lag since they are interdependent
+        prev_offset = prev_lag = float('inf')
+        while True:
+            offset = find_offset(df, idx_pair)
+            df.loc[:, idx_pair[1]] = coef*(df.loc[:, idx_pair[1]] + offset)
+            
+            # Find the lag in terms of a row difference in input/output functions
+            lag, cmd_row_idx, mes_row_idx = find_lag(df, idx_pair)
+            idx_lag = mes_row_idx-cmd_row_idx
+            
 
-        # Find the lag in terms of a row difference in input/output functions
-        _, cmd_row_idx, mes_row_idx = find_lag(df, idx_pair)
-        lag = mes_row_idx-cmd_row_idx
-        
-        # Shift measurement signal up to account for input lag
-        df.loc[:, idx_pair[1]] = df.loc[:, idx_pair[1]].shift(-lag)
-        
-        # Account for offset again just to ensure perfect data match
-        offset = find_offset(df, idx_pair)
-        df.loc[:, idx_pair[1]] = (df.loc[:, idx_pair[1]] + offset)
-        
-        
+            # Shift measurement signal up to account for input lag
+            df.loc[:, idx_pair[1]] = df.loc[:, idx_pair[1]].shift(-idx_lag)
+            
+            # Tolerance set to 1e-5 for both offset and lag
+            if abs(offset-prev_offset) < 1e-5 and abs(lag-prev_lag) < 1e-5:
+                break
+            
+            prev_offset = offset
+            prev_lag = lag
+            print(f"Offset: {offset}, Lag: {lag}, idx_lag: {idx_lag}")
     
     # Remove NaN values that would come from the measurement shift
     df.dropna(inplace=True)
@@ -67,7 +90,6 @@ def plot_dof(df, idx_pair, interval=None):
     if interval == None:
         interval = list(range(0, df.shape[0]))
     
-    ### CHANGE TO REAL CMD VELOCITY AND ACCELERATION INSTEAD OF TAKING DERIVATIVES
     # Numerical derivatives of var_1
     vel_1 = df.loc[interval, idx_pair[0]+6]
     acc_1 = df.loc[interval, idx_pair[0]+12]
@@ -108,12 +130,15 @@ def find_lag(df, idx_pair):
     '''
     Determine the fixed delay between input and output signals using the commanded and measured velocities.
     '''
-    #vel_cmd = np.gradient(df.loc[:, idx_pair[0]], df.loc[:, 0])
-    #vel_mes = -1*np.gradient(df.loc[:, idx_pair[1]], df.loc[:, 0])
     pos_cmd = df.loc[:, idx_pair[0]]
     pos_mes = df.loc[:, idx_pair[1]]
     cmd_zero = False
-    
+
+    # Check if pos_cmd and pos_mes are full of zeroes
+    if not np.any(pos_cmd) or not np.any(pos_mes):
+        print("Error: Degree of Freedom is full of zeroes.")
+        return None, None, None
+
     for i in range(len(pos_cmd)-1):
         # Ticker starts once zero position identified on cmd signal
         if (pos_cmd[i] * pos_cmd[i+1] < 0) and not cmd_zero:
@@ -128,8 +153,16 @@ def find_lag(df, idx_pair):
             mes_row_idx = i
             print(f"MES zero @ {df.loc[i, 0]}\nRows: {i}-{i+1}")
             break
+
+    # If no zero crossing was found, return None
+    if not cmd_zero:
+        print("Error: No zero crossing found.")
+        return None, None, None
+
     # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
     return ticker_end-ticker_start, cmd_row_idx, mes_row_idx 
+
+
 
 index_match = {"x": (38, 74), "y": (39, 75), "z": (40, 76), "phi": (41, 77), "theta": (42,78), "psi": (43, 79)}
 
@@ -137,4 +170,4 @@ data = clean_data('data/log/motion240301-pmd.log', index_match)
 data_range  = list(range(10,528))
 #data_range = list(range(5000, 6000))
 plot_dof(data, index_match['z'])
-
+load_hdf5_file('data/hdf5/motionlog-20240301_133202.hdf5')
