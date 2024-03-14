@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from filterpy.kalman import ExtendedKalmanFilter
 import h5py
+import os
 
 def kalman_filter():
     rk = ExtendedKalmanFilter(dim_x=3, dim_z=1)
@@ -61,7 +62,7 @@ def clean_data(df):
     
 def find_derivatives(df):
     '''
-    Compute derivative of a specified DoF using forward difference formula.
+    Compute derivatives of a specified DoF using forward difference formula.
     '''
     df['vel_mes'] = (df['pos_mes'].shift(-1) - df['pos_mes']) / (df['t'].shift(-1) - df['t'])
     df['acc_mes'] = (df['vel_mes'].shift(-1) - df['vel_mes']) / (df['t'].shift(-1) - df['t'])
@@ -158,8 +159,11 @@ def plot_dof(df, dof, file_type, interval=None):
     # Adjust the layout
     plt.tight_layout()
     
+    # Create the plots directory if it doesn't exist
+    os.makedirs(f'plots/{dof}', exist_ok=True)
+    
     # Save the figure
-    plt.savefig(f'plots/{file_type}--{dof}.png')
+    plt.savefig(f'plots/{dof}/{file_type}.png', dpi=300)
     
     # Show the figure
     plt.show()
@@ -172,8 +176,9 @@ file_dir = {
     "PMD": "data/hdf5/motionlog-20240301_150320.hdf5",
 }
 
-dof = 'z'
-file_type = 'PMD'
-df_z = hdf5_to_df(file_dir[file_type], dof)
-preprocess(df_z)
-plot_dof(df_z, dof, file_type)
+if __name__ == "__main__":
+    dof = 'z'
+    file_type = 'AGARD-AR-144_A'
+    df_z = hdf5_to_df(file_dir[file_type], dof)
+    preprocess(df_z)
+    plot_dof(df_z, dof, file_type)
