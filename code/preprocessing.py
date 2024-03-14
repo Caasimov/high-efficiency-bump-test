@@ -1,7 +1,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from filterpy.kalman import ExtendedKalmanFilter
 import h5py
+
+def kalman_filter():
+    rk = ExtendedKalmanFilter(dim_x=3, dim_z=1)
+    dt = 0.05
+
 
 def load_log_file(fname):
     '''
@@ -23,7 +29,7 @@ def clean_data(fname, index_lst):
     '''
     Clean data from .log files and return a pandas dataframe
     '''
-    df = load_log_file(fname)
+    df = pd.read_csv(fname, sep='\s+', engine='python', header=None)
 
     # Ensure constant measurement offsets & input lag is corrected
     coef = 1
@@ -43,19 +49,19 @@ def clean_data(fname, index_lst):
         while True:
             offset = find_offset(df, idx_pair)
             df.loc[:, idx_pair[1]] = coef*(df.loc[:, idx_pair[1]] + offset)
-            
+
             # Find the lag in terms of a row difference in input/output functions
             lag, cmd_row_idx, mes_row_idx = find_lag(df, idx_pair)
             idx_lag = mes_row_idx-cmd_row_idx
-            
+
 
             # Shift measurement signal up to account for input lag
             df.loc[:, idx_pair[1]] = df.loc[:, idx_pair[1]].shift(-idx_lag)
-            
+
             # Tolerance set to 1e-5 for both offset and lag
             if abs(offset-prev_offset) < 1e-5 and abs(lag-prev_lag) < 1e-5:
                 break
-            
+
             prev_offset = offset
             prev_lag = lag
             print(f"Offset: {offset}, Lag: {lag}, idx_lag: {idx_lag}")
@@ -89,7 +95,7 @@ def plot_dof(df, idx_pair, interval=None):
     '''
     if interval == None:
         interval = list(range(0, df.shape[0]))
-    
+
     # Numerical derivatives of var_1
     vel_1 = df.loc[interval, idx_pair[0]+6]
     acc_1 = df.loc[interval, idx_pair[0]+12]
