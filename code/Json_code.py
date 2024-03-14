@@ -16,18 +16,6 @@ def extract_data_first_kind(file_path):
     ]
     return extracted_data
 
-def extract_data_second_kind(file_path):
-    with open(file_path, 'r') as f:
-        data=json.load(f)
-    extracted_data = [
-        [move["move"]["profile"]["Tfade"],
-        move["move"]["profile"]["Ttotal"],
-        move["move"]["profile"]["omg"],
-        move["move"]["profile"]["gain"],
-        move["move"]["profile"]["phi0"]]
-        for move in data["moves"] if "profile" in move["move"] and "FadedSineProfile" in move["move"]["profile"]["type"]
-    ]
-
 def create_sine(Tfade, Ttotal, omg, gain, phi0):
     x_val = []
     t_val = []
@@ -50,7 +38,7 @@ file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-tes
 extracted_data = extract_data_first_kind(file_path)
 
 if extracted_data is None:
-    extracted_data = extract_data_second_kind(file_path)
+    extracted_data = extract_data_from_second_kind(file_path)
 
 for i in range(0, len(extracted_data), 6):
     if len(extracted_data[i][2]) == 1:
