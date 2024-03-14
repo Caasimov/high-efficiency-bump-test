@@ -2,31 +2,31 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144a.json', 'r') as f:
+#with open('[directory]\\srs-agard144a.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
     
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144b.json', 'r') as f:
+#with open('[directory]\\srs-agard144b.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
     
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144d.json', 'r') as f:
+#with open('[directory]\\srs-agard144d.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
 
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144e.json', 'r') as f:
+#with open('[diretory]\\srs-agard144e.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
 
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines1.json', 'r') as f:
+#with open('[directory]\\srs-test-motion-sines1.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
 
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines2.json', 'r') as f:
+#with open('[directory]\\srs-test-motion-sines2.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
 
-#with open('C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines3.json', 'r') as f:
+#with open('[directory]\\srs-test-motion-sines3.json', 'r') as f:
     # Load the JSON data
     #data = json.load(f)
     
