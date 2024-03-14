@@ -15,7 +15,7 @@ def load_hdf5_file(fname):
     Load a hdf5 file into a pandas dataframe
     '''
     with h5py.File(fname, 'r') as f:
-        data = f['data'][:]
+        data = f['data/commanded/data']
         df = pd.DataFrame(data)
     print(df.head())
 
