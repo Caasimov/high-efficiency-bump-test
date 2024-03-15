@@ -78,7 +78,7 @@ def find_offset(df):
 
 def find_lag(df):
     '''
-    Determine the fixed delay between input and output signals using the commanded and measured velocities using cross-correlation.
+    Determine the fixed delay between input and output signals using the commanded and measured positions using cross-correlation.
     '''    
     # Determine cross correlation
     cross_corr = np.correlate(df['pos_cmd'], df['pos_mes'], mode='full')
