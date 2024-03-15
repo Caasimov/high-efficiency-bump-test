@@ -62,10 +62,10 @@ def clean_data(df):
     
 def find_derivatives(df):
     '''
-    Compute derivatives of a specified DoF using forward difference formula.
+    Compute derivatives of a specified DoF using central difference formula.
     '''
-    df['vel_mes'] = (df['pos_mes'].shift(-1) - df['pos_mes']) / (df['t'].shift(-1) - df['t'])
-    df['acc_mes'] = (df['vel_mes'].shift(-1) - df['vel_mes']) / (df['t'].shift(-1) - df['t'])
+    df['vel_mes'] = (df['pos_mes'].shift(-1) - df['pos_mes'].shift(1)) / (df['t'].shift(-1) - df['t'].shift(1))
+    df['acc_mes'] = (df['vel_mes'].shift(-1) - df['vel_mes'].shift(1)) / (df['t'].shift(-1) - df['t'].shift(1))
     
     # Remove rows with NaN values and reset index
     clean_data(df)
@@ -74,16 +74,16 @@ def find_offset(df):
     '''
     Determine positional/rotational system offset for a specified DoF between commanded and measured data.
     '''
-    return df.loc[0, 'pos_mes'] - df.loc[0, 'pos_cmd']
+    return np.mean(df['pos_mes']) - np.mean(df['pos_cmd'])
 
 def find_lag(df):
     '''
     Determine the fixed delay between input and output signals using the commanded and measured velocities using cross-correlation.
     '''    
     # Determine cross correlation
-    cross_corr = np.correlate(df['vel_cmd'], df['vel_mes'], mode='full')
+    cross_corr = np.correlate(df['pos_cmd'], df['pos_mes'], mode='full')
     
-    idx_lag = abs(cross_corr.argmax() - len(df['vel_mes']) + 1) 
+    idx_lag = abs(cross_corr.argmax() - len(df['pos_mes']) + 1) 
     time_lag = df.loc[idx_lag, 't'] - df.loc[0, 't']
     
     # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
@@ -178,7 +178,7 @@ file_dir = {
 
 if __name__ == "__main__":
     dof = 'z'
-    file_type = 'AGARD-AR-144_A'
+    file_type = 'PMD'
     df_z = hdf5_to_df(file_dir[file_type], dof)
     preprocess(df_z)
     plot_dof(df_z, dof, file_type)
