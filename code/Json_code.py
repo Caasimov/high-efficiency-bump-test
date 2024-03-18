@@ -2,7 +2,7 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 
-def extract_data_first_kind(file_path):
+def extract_data_function(file_path):
     with open(file_path, 'r') as f:
     # Load the JSON data
         data = json.load(f)
@@ -35,10 +35,8 @@ file_path = 'data/json/srs-agard144a.json'
 #file_path = 'data/json/srs-test-motion-sines3.json'
 
 
-extracted_data = extract_data_first_kind(file_path)
+extracted_data = extract_data_function(file_path)
 
-if extracted_data is None:
-    extracted_data = extract_data_from_second_kind(file_path)
 
 for i in range(0, len(extracted_data), 6):
     if len(extracted_data[i][2]) == 1:
