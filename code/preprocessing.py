@@ -135,20 +135,20 @@ def plot_dof(df, dof, file_type, interval=None):
     fig, axs = plt.subplots(3, 1, figsize=(10,10))
 
     # Position subplot
-    axs[0].plot(df.loc[interval, 't'], df.loc[interval, 'pos_cmd'], label="CMD pos", color='navy')
-    axs[0].plot(df.loc[interval, 't'], df.loc[interval, 'pos_mes'], label="MES pos", color='darkred')
+    axs[0].plot(df.loc[interval, 't'], df.loc[interval, 'pos_cmd'], label="CMD pos", color='blue')
+    axs[0].plot(df.loc[interval, 't'], df.loc[interval, 'pos_mes'], label="MES pos", color='red')
     axs[0].set_title('Position')
     axs[0].legend()
 
     # Velocity subplot
-    axs[1].plot(df.loc[interval, 't'], vel_1, label="CMD vel", color='dodgerblue')
+    axs[1].plot(df.loc[interval, 't'], vel_1, label="CMD vel", color='blue')
     axs[1].plot(df.loc[interval, 't'], vel_2, label="MES vel", color='red')
     axs[1].set_title('Velocity')
     axs[1].legend()
 
     # Acceleration subplot
-    axs[2].plot(df.loc[interval, 't'], acc_1, label="CMD acc", color='lightskyblue')
-    axs[2].plot(df.loc[interval, 't'], acc_2, label="MES acc", color='lightcoral')
+    axs[2].plot(df.loc[interval, 't'], acc_1, label="CMD acc", color='blue')
+    axs[2].plot(df.loc[interval, 't'], acc_2, label="MES acc", color='red')
     axs[2].set_title('Acceleration')
     axs[2].legend()
 
@@ -178,7 +178,7 @@ file_dir = {
 
 if __name__ == "__main__":
     dof = 'z'
-    file_type = 'PMD'
+    file_type = 'BUMP'
     df_z = hdf5_to_df(file_dir[file_type], dof)
     preprocess(df_z)
     plot_dof(df_z, dof, file_type)

@@ -26,7 +26,7 @@ def create_sine(Tfade, Ttotal, omg, gain, phi0):
         x_val.append(x)
     return t_val, x_val
 
-file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144a.json'
+file_path = 'data/json/srs-agard144a.json'
 #file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144b.json'
 #file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144d.json' 
 #file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144e.json'
