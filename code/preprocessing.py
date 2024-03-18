@@ -88,6 +88,33 @@ def find_lag(df):
     
     # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
     return time_lag, idx_lag 
+def find_zero(df):
+    '''
+    find the zero velocity and return list with time stamps for bump and pmd
+    '''
+    
+    prev = 0
+    idx=0
+    vel_0=[]
+    domain=[]
+    for element in df['vel_cmd']:
+        
+        if prev*element < 0:
+            
+            vel_0.append(idx)
+        prev = element
+        idx+=1
+    
+    '''  
+    for element in range(len(vel_0)):
+        lower = vel_0[element]-error
+        upper = vel_0[element]+error
+        for number in range(lower, upper):
+            domain.append(number)
+    '''
+    return vel_0
+
+
 
 def preprocess(df, freq_sample=100):
     '''
@@ -181,4 +208,5 @@ if __name__ == "__main__":
     file_type = 'BUMP'
     df_z = hdf5_to_df(file_dir[file_type], dof)
     preprocess(df_z)
+    vel_0 = find_zero(df_z) #return list of all zero points with just after the 0 point
     plot_dof(df_z, dof, file_type)
