@@ -27,12 +27,12 @@ def create_sine(Tfade, Ttotal, omg, gain, phi0):
     return t_val, x_val
 
 file_path = 'data/json/srs-agard144a.json'
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144b.json'
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144d.json' 
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144e.json'
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines1.json'
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines2.json'
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines3.json'
+#file_path = 'data/json/srs-agard144b.json'
+#file_path = 'data/json/srs-agard144d.json' 
+#file_path = 'data/json/srs-agard144e.json'
+#file_path = 'data/json/srs-test-motion-sines1.json'
+#file_path = 'data/json/srs-test-motion-sines2.json'
+#file_path = 'data/json/srs-test-motion-sines3.json'
 
 
 extracted_data = extract_data_first_kind(file_path)
