@@ -60,6 +60,7 @@ file_path = 'data/json/srs-test-motion-sines1.json'
 
 
 extracted_data = extract_data_function(file_path)
+
 if file_path == 'data/json/srs-test-motion-sines1.json':
     extracted_data2 = extract_data_function('data/json/srs-test-motion-sines2.json') 
     for i in range(len(extracted_data2)):
