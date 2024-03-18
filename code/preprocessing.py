@@ -4,6 +4,7 @@ import numpy as np
 from filterpy.kalman import ExtendedKalmanFilter
 import h5py
 import os
+import json
 
 def kalman_filter():
     rk = ExtendedKalmanFilter(dim_x=3, dim_z=1)
@@ -167,18 +168,88 @@ def plot_dof(df, dof, file_type, interval=None):
     
     # Show the figure
     plt.show()
+
+def extract_data_function(file_path):
+    with open(file_path, 'r') as f:
+    # Load the JSON data
+        data = json.load(f)
+    extracted_data = [
+        [move["time"],
+        move["move"]["profile"]["Tfade"],
+        move["move"]["profile"]["Ttotal"],
+        move["move"]["profile"]["omg"],
+        move["move"]["profile"]["gain"],
+        move["move"]["profile"]["phi0"],
+        move["move"]["axis"]]
+        for move in data["moves"] if "profile" in move["move"] and "FadedSineProfile" in move["move"]["profile"]["type"]
+    ]
+    return extracted_data
+
+def time_conversion(extracted_data):
+    time_stamps = []
+    for i in range(0, len(extracted_data)):
+        if len(extracted_data[i][3]) == 1:
+            time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])     
+        else:   
+            time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])
+    time_stamps =  [[round(entry * 10**-4, 6) for entry in sublist] for sublist in time_stamps]
+    return time_stamps
+
+file_direct = {
+    "AGARD-AR-144-A" : 'data/json/srs-agard144a.json',
+    "AGARD-AR-144-B": 'data/json/srs-agard144b.json',
+    "AGARD-AR-144-D" : 'data/json/srs-agard144d.json', 
+    "AGARD-AR-144-E" : 'data/json/srs-agard144e.json',
+    "MULTI-SINE-1" : 'data/json/srs-test-motion-sines1.json',
+    "MULTI-SINE-2" : 'data/json/srs-test-motion-sines2.json',
+    "MULTI-SINE-3" : 'data/json/srs-test-motion-sines3.json'
+}
+
+file_type1 = 'MULTI-SINE-1'
+
+extracted_data = extract_data_function(file_direct[file_type1])
+if file_type1 == 'MULTI-SINE-1':
+    extracted_data2 = extract_data_function(file_direct["MULTI-SINE-2"]) 
+    for i in range(len(extracted_data2)):
+        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
+    extracted_data.extend(extracted_data2)
+    extracted_data2 = extract_data_function(file_direct["MULTI-SINE-3"]) 
+    for i in range(len(extracted_data2)):
+        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
+    extracted_data.extend(extracted_data2)
+
+if file_type1 == "AGARD-AR-144-B":
+    extracted_data2 = extract_data_function(file_direct["AGARD-AR-144-E"]) 
+    for i in range(len(extracted_data2)):
+        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
+    extracted_data.extend(extracted_data2)
     
 file_dir = {
     "AGARD-AR-144_A": "data/hdf5/motionlog-20240301_133202.hdf5",
     "AGARD-AR-144_B+E": "data/hdf5/motionlog-20240301_141239.hdf5",
     "MULTI-SINE": "data/hdf5/motionlog-20240301_144109.hdf5",
     "BUMP": "data/hdf5/motionlog-20240301_150040.hdf5",
-    "PMD": "data/hdf5/motionlog-20240301_150320.hdf5",
+    "PMD": "data/hdf5/\motionlog-20240301_150320.hdf5",
 }
 
 if __name__ == "__main__":
     dof = 'z'
-    file_type = 'BUMP'
+    file_type = 'MULTI-SINE'
     df_z = hdf5_to_df(file_dir[file_type], dof)
     preprocess(df_z)
     plot_dof(df_z, dof, file_type)
+    print(df_z)
+
+    time_stamps = time_conversion(extracted_data)
+    filtered_rows = []
+
+    # Iterate through each nested list
+    for time_range in time_stamps:
+        start_time, end_time = time_range
+        
+        # Filter the DataFrame based on the time range
+        filtered_df = df_z[(df_z['t'] >= start_time) & (df_z['t'] <= end_time)]
+        print(filtered_df)
+        
+        # Append the filtered rows to the list
+        filtered_rows.append(filtered_df)

@@ -33,24 +33,50 @@ def create_sine(dt, Tfade, Ttotal, omg, gain, phi0, axis):
 def time_conversion(extracted_data):
     time_stamps = []
     for i in range(0, len(extracted_data)):
-        if len(extracted_data[i][3]) == 1:
-            time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])     
-        else:   
-            time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])
+        time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])     
     time_stamps =  [[round(entry * 10**-4, 6) for entry in sublist] for sublist in time_stamps]
-
     return time_stamps
 
-file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-agard144a.json'
+def omega_values(extracted_data):
+    omega_values = []
+    for i  in range(len(extracted_data)):
+        if len(extracted_data[i][3]) == 1:
+            omega_values.append(extracted_data[i][3][0])     
+        else:  
+            omegas = []
+            for j in range(len(extracted_data[i][3])): 
+                omegas.append(extracted_data[i][3][j])
+            omega_values.append(omegas)
+    return omega_values
+
+
+#file_path = 'data/json/srs-agard144a.json'
 #file_path = 'data/json/srs-agard144b.json'
 #file_path = 'data/json/srs-agard144d.json' 
 #file_path = 'data/json/srs-agard144e.json'
-#file_path = 'C:\\Users\\auror\\Documents\\TU Delft\\DARE\\Git\\reversal-bump-test-new\\data\\json\\srs-test-motion-sines1.json'
+file_path = 'data/json/srs-test-motion-sines1.json'
 #file_path = 'data/json/srs-test-motion-sines2.json'
 #file_path = 'data/json/srs-test-motion-sines3.json'
 
 
 extracted_data = extract_data_function(file_path)
+if file_path == 'data/json/srs-test-motion-sines1.json':
+    extracted_data2 = extract_data_function('data/json/srs-test-motion-sines2.json') 
+    for i in range(len(extracted_data2)):
+        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
+    extracted_data.extend(extracted_data2)
+    extracted_data2 = extract_data_function('data/json/srs-test-motion-sines3.json') 
+    for i in range(len(extracted_data2)):
+        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
+    extracted_data.extend(extracted_data2)
+
+if file_path == 'data/json/srs-agard144b.json':
+    extracted_data2 = extract_data_function('data/json/srs-agard144e.json') 
+    for i in range(len(extracted_data2)):
+        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
+    extracted_data.extend(extracted_data2)
+
+
 dt_values = []
 
 combined_t_values = []
@@ -75,12 +101,11 @@ for i in range(0, len(extracted_data)):
         combined_t_values.extend(t_values)
 
         dt_values = time_conversion(extracted_data)
-
-        
-print(dt_values)    
+omegas = omega_values(extracted_data)
+  
 # Plot the combined sine function
 plt.plot(combined_t_values, combined_sine_function)
-plt.title('Plot of Combined Sine Functions')
+plt.title('Plot')
 plt.xlabel('dt')
 plt.ylabel('x')
 plt.grid(True)
