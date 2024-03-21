@@ -90,6 +90,17 @@ def find_lag(df):
     # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
     return time_lag, idx_lag 
 
+def find_zero(df):
+    idx = 0
+    vel_0=[]
+    previous = 0
+    for element in df['vel_cmd']:
+        if previous * element < 0:
+            vel_0.append(idx)
+        idx += 1
+        previous = element
+    return vel_0
+
 def preprocess(df, freq_sample=100):
     '''
     Clean the dataframe for direct analysis.
@@ -228,15 +239,17 @@ file_dir = {
     "AGARD-AR-144_A": "data/hdf5/motionlog-20240301_133202.hdf5",
     "AGARD-AR-144_B+E": "data/hdf5/motionlog-20240301_141239.hdf5",
     "MULTI-SINE": "data/hdf5/motionlog-20240301_144109.hdf5",
-    "BUMP": "data/hdf5/motionlog-20240301_150040.hdf5",
-    "PMD": "data/hdf5/\motionlog-20240301_150320.hdf5",
+    "BUMP": "C:/Users/Olafe/studie/project/motionlog-20240301_150040.hdf5",
+    "PMD": "C:/Users/Olafe/studie/project/motionlog-20240301_150320.hdf5",
 }
 
 if __name__ == "__main__":
     dof = 'z'
-    file_type = 'MULTI-SINE'
+    file_type = 'BUMP'
     df_z = hdf5_to_df(file_dir[file_type], dof)
     preprocess(df_z)
+    zero = find_zero(df_z)
+    print(zero)
     plot_dof(df_z, dof, file_type)
     print(df_z)
 
