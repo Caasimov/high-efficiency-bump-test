@@ -87,7 +87,8 @@ def find_lag(df):
     time_lag = df.loc[idx_lag, 't'] - df.loc[0, 't']
     
     # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
-    return time_lag, idx_lag 
+    return time_lag, idx_lag
+
 def find_zero(df):
     '''
     find the zero velocity and return list with time stamps for bump and pmd
@@ -113,8 +114,6 @@ def find_zero(df):
             domain.append(number)
     '''
     return vel_0
-
-
 
 def preprocess(df, freq_sample=100):
     '''
