@@ -101,6 +101,16 @@ def find_zero(df):
         previous = element
     return vel_0
 
+def createinterval(df):
+    zeros = find_zero(df)
+    freqlist = []
+    for zero in range(len(zeros)-2):
+        listdf = []
+        for element in range(zeros[zero], zeros[zero+2]):
+            listdf.append(element)
+        freqlist.append(listdf)
+    return freqlist
+
 def preprocess(df, freq_sample=100):
     '''
     Clean the dataframe for direct analysis.
@@ -248,10 +258,10 @@ if __name__ == "__main__":
     file_type = 'BUMP'
     df_z = hdf5_to_df(file_dir[file_type], dof)
     preprocess(df_z)
-    zero = find_zero(df_z)
+    zero = createinterval(df_z)
     print(zero)
     plot_dof(df_z, dof, file_type)
-    print(df_z)
+   
 
     time_stamps = time_conversion(extracted_data)
     filtered_rows = []
