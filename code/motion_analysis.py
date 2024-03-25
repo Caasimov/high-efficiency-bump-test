@@ -1,90 +1,112 @@
-from scipy import fft, ifft
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.fft import fft, fftfreq
 from preprocessing import *
 
-import numpy as np
-from scipy.signal import find_peaks
-import matplotlib.pyplot as plt
+import pandas as pd
 
-def fourier_transform(df_list):
-    '''
-    Perform a sectional FFT on preprocessed dataframes.
-    '''
+def fourier_transform(df_list, sampling_freq = 100):
+    """
+    Perform Fourier Transform on all isolated wavelenths.
     
-    dof_freq_analysis = {
-        'x': [[], []],
-        'y': [[], []],
-        'z': [[], []],
-        'phi': [[], []],
-        'theta': [[], []],
-        'psi': [[], []]
-        }
+    Parameters:
+    df_list: list of dataframes, each containing a single isolated wavelength
     
-    key_list = list(dof_freq_analysis.keys())
+    Returns:
+    result_list: list of dataframes, each containing the FFT results for a single wavelength
     
-    for idx, dof in enumerate(df_list):
-        for df in dof:
-            # Perform FFT on the data for both commanded and measured signal
-            transform_cmd = fft(df['acc_cmd'])
-            transform_mes = fft(df['acc_mes'])
-            dof_freq_analysis[key_list[idx]][0].append(transform_cmd)
-            dof_freq_analysis[key_list[idx]][1].append(transform_mes)
+    """
     
-    return dof_freq_analysis
+    result_list = []
+    
+    for df in df_list:
+        #Perform Fourier Transform
+        N = len(df['acc_cmd'])
+        T = 1.0 / sampling_freq
+        yf_cmd = fft(df['acc_cmd'].to_numpy())
+        yf_mes = fft(df['acc_mes'].to_numpy())
+        xf = fftfreq(N, T)[:N//2]
+        
+        # Determine amplitudes
+        amplitude_cmd = 2.0/N * np.abs(yf_cmd[0:N//2])
+        amplitude_mes = 2.0/N * np.abs(yf_mes[0:N//2])
+        
+        # Create a new DataFrame to store the results
+        result_df = pd.DataFrame({
+            'freq': xf,
+            'amp_cmd': amplitude_cmd,
+            'amp_mes': amplitude_mes
+        })
+        
+        result_list.append(result_df)
+    
+    return result_list
 
-def find_harmonics(dof_freq_analysis, dof, input_freq, sampling_freq = 100):
-    '''
-    Determine relevant harmonics for a given degree of freedom and finds harmonics
-    '''
-    fundamental_frequency = input_freq
-    fft_result = dof_freq_analysis[dof]
-
-    peaks, properties  = find_peaks(np.abs(fft_result))
-    freqs = np.fft.fftfreq(len(fft_result)) * sampling_freq
-
-    #Find harmonics
-    harmonics = []
-    for peak in freqs[peaks]:
-        if peak != 0:
-            harmonic_ratio = peak / fundamental_frequency
-        if np.isclose(harmonic_ratio, np.round(harmonic_ratio)):
-            harmonics.append((peak, harmonic_ratio))
-
-    #Get 2nd and 3rd harmonics
-    for harmonic in harmonics:
-        if harmonic[1]/fundamental_frequency == 2:
-            second_harmonic = harmonic
-        elif harmonic[1]/fundamental_frequency == 3:
-            third_harmonic = harmonic
+def find_harmonics(df, harmonics_range):
+    """
+    Find the harmonics of the FFT results.
     
-    return second_harmonic, third_harmonic
+    Parameters:
+    df: DataFrame containing the FFT results
+    harmonics_range: range, the range of harmonics to find
+    
+    Returns:
+    df_harmonics: DataFrame containing the harmonic data
+    
+    """
+    df_harmonics = pd.DataFrame()  # Initialize df_harmonics as an empty DataFrame
 
-def describing_func(dof_freq_analysis, dof):
-    '''
-    Determine the describing function for AGARD tests.
-    '''
-    
-def bump_analysis(df, bound=5):
-    '''
-    Isolate and analyze reversal bumps from dataframes.
-    '''
-    
-    vel_zeroes = find_zero(df)[1:-2]
-    
-    bumps = np.array([])
-    
-    for pos, idx in enumerate(vel_zeroes):
-        bounds = list(range(idx-bound, idx+bound+1))
-        bump = np.array(np.abs(df.loc[bounds, 'acc_mes'] - df.loc[bounds, 'acc_cmd']))
-        bumps = np.append(bumps, bump)
-    return bumps
-       
-dof = 'z'
-file_type = 'BUMP'
-df = hdf5_to_df(file_dir[file_type], dof)
-preprocess(df)
+    idx_max = df['amp_cmd'].idxmax()
+    fundamental_freq = df.loc[idx_max, 'freq']
 
-graph = bump_analysis(df)
+    for n in harmonics_range:
+        harmonic_freq = fundamental_freq * n
+        harmonic_idx = np.abs(df['freq'] - harmonic_freq).idxmin()
+        row = df.loc[harmonic_idx]
+        df_harmonics = df_harmonics._append(row, ignore_index=True)
 
-# Plot the results
-plt.plot(graph)
-plt.show()
+    return df_harmonics
+
+def invert_fft(df, N, sampling_freq=100):
+    """
+    Generate a sum of sine waves based on the frequencies and amplitudes in df.
+
+    Parameters:
+    df: DataFrame containing the frequencies and amplitudes
+    N: int, the number of samples to generate
+
+    Returns:
+    y: array-like, the sum of sine waves
+    """
+    t = np.arange(0, N/sampling_freq, 1/sampling_freq)
+    y = np.zeros_like(t)
+    for _, row in df.iterrows():
+        freq = row['freq']
+        amp = row['amp_mes']  # or 'amp_cmd', depending on which amplitude you want to use
+        y += amp*np.sin(2*np.pi*freq*t)
+    return t, y
+
+if __name__ == "__main__":
+    dof = 'z'
+    data = hdf5_to_df('AGARD-AR-144_A', dof)
+    preprocess(data)
+    apply_filter(data)
+    wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_A')
+    agard_transform = fourier_transform(wavelengths)
+    idx_max = agard_transform[0]['amp_cmd'].idxmax()
+    H_ki = agard_transform[0].loc[idx_max, 'amp_mes'] / agard_transform[0].loc[idx_max, 'amp_cmd']
+    print(H_ki)
+    
+    #Find the first 5 harmonics
+    harmonics = find_harmonics(agard_transform[0], range(2, 6))
+    
+    N = len(wavelengths[3]['acc_cmd'])
+    t, y = invert_fft(harmonics, N)
+    # plt.plot(agard_transform[0]['freq'], agard_transform[0]['amp_cmd'])
+    # plt.plot(agard_transform[0]['freq'], agard_transform[0]['amp_mes'])
+    plt.plot(t, y)
+    plt.show()
+    #print(wavelengths)
+    #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_cmd'])
+    #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_mes'])
+    #plt.show()

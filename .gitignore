@@ -1,3 +1,4 @@
 /data/log
 /data/hdf5
 /plots
+code/__pycache__/

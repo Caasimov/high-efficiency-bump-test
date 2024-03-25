@@ -1,19 +1,32 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from filterpy.kalman import ExtendedKalmanFilter
+from scipy.signal import medfilt
 import h5py
 import os
-import json
-
-def kalman_filter():
-    rk = ExtendedKalmanFilter(dim_x=3, dim_z=1)
-    dt = 0.05
+from json_code import *
 
 def hdf5_to_df(fname, dof):
-    '''
-    Load a hdf5 file into a pandas dataframe
-    '''
+    """
+    Load a HDF5 file into a pandas dataframe.
+    
+    Parameters:
+    fname (str): The name of the test file (not path).
+    dof (str): The degree of freedom to be analyzed.
+    
+    Returns:
+    pd.DataFrame: A pandas dataframe containing the data.
+    
+    """
+    
+    file_dir = {
+        "AGARD-AR-144_A": "data/hdf5/motionlog-20240301_133202.hdf5",
+        "AGARD-AR-144_B+E": "data/hdf5/motionlog-20240301_141239.hdf5",
+        "MULTI-SINE": "data/hdf5/motionlog-20240301_144109.hdf5",
+        "BUMP": "data/hdf5/motionlog-20240301_150040.hdf5",
+        "PMD": "data/hdf5/motionlog-20240301_150320.hdf5",
+    }
+    
     paths_cmd = [
         'data/commanded/tick',
         f'data/commanded/data/{dof}',
@@ -29,7 +42,7 @@ def hdf5_to_df(fname, dof):
     column_names_cmd = ['t', 'pos_cmd', 'vel_cmd', 'acc_cmd']
     column_names_mes = ['t', 'pos_mes']
     
-    with h5py.File(fname, 'r') as f:
+    with h5py.File(file_dir[fname], 'r') as f:
         # Create a list of dataframes from the paths
         dfs_cmd = [pd.DataFrame(f[path][()], dtype=np.float64) for path in paths_cmd]
         dfs_mes = [
@@ -55,16 +68,47 @@ def hdf5_to_df(fname, dof):
     return merged_df
 
 def clean_data(df):
-    '''
+    """
     Remove rows with NaN values and reset index.
-    '''
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe to be cleaned.
+    
+    Returns:
+    None
+    
+    """
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
     
+def apply_filter(df, window_size=3):
+    """
+    Apply a median filter to the data.
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    window_size (int): The size of the window for the median filter.
+    
+    Returns:
+    None
+    
+    """
+    df['pos_mes'] = medfilt(df['pos_mes'], window_size)
+    df['vel_mes'] = medfilt(df['vel_mes'], window_size)
+    df['acc_mes'] = medfilt(df['acc_mes'], window_size)
+    
 def find_derivatives(df):
-    '''
-    Compute derivatives of a specified DoF using central difference formula.
-    '''
+    """
+    Compute derivatives of a specified DoF using mixed difference scheme.
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    
+    Returns:
+    None
+    
+    """
+    ### NOTE: change this so that the end points arent excluded ###
     df['vel_mes'] = (df['pos_mes'].shift(-1) - df['pos_mes'].shift(1)) / (df['t'].shift(-1) - df['t'].shift(1))
     df['acc_mes'] = (df['vel_mes'].shift(-1) - df['vel_mes'].shift(1)) / (df['t'].shift(-1) - df['t'].shift(1))
     
@@ -72,15 +116,29 @@ def find_derivatives(df):
     clean_data(df)
 
 def find_offset(df):
-    '''
-    Determine positional/rotational system offset for a specified DoF between commanded and measured data.
-    '''
+    """
+    Determine system offset for a specified DoF between commanded and measured data.
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    
+    Returns:
+    float: The offset value.
+    
+    """
     return np.mean(df['pos_mes']) - np.mean(df['pos_cmd'])
 
 def find_lag(df):
-    '''
+    """
     Determine the fixed delay between input and output signals using the commanded and measured positions using cross-correlation.
-    '''    
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    
+    Returns:
+    tuple: A tuple containing the time lag and the index of the zero on the cmd and mes columns.
+    
+    """    
     # Determine cross correlation
     cross_corr = np.correlate(df['pos_cmd'], df['pos_mes'], mode='full')
     
@@ -90,21 +148,35 @@ def find_lag(df):
     # Actual lag value in terms of time returned along with the position of the zero on the cmd and mes columns
     return time_lag, idx_lag
 
-def find_zero(df):
-    idx = 0
-    vel_0=[]
-    previous = 0
-    for element in df['vel_cmd']:
-        if previous * element < 0:
-            vel_0.append(idx)
-        idx += 1
-        previous = element
-    return vel_0
+def find_zero(df, dof='vel_cmd'):
+    """
+    Finds indexes of velocity reversals.
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    dof (str): The degree of freedom to be analyzed, default is 'vel_cmd'.
+    
+    Returns:
+    list: A list of indexes where the velocity is zero.
+    
+    """
+    idx_zero = []
+    for i in range(df.index[0], df.index[-1]):
+        if df.loc[i, dof] * df.loc[i+1, dof] < 0:
+            idx_zero.append(i)
+    return idx_zero
 
 def preprocess(df, freq_sample=100):
-    '''
+    """
     Clean the dataframe for direct analysis.
-    '''
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    
+    Returns:
+    None
+    
+    """
     
     # Determine time scaling factor
     delta_t = np.float64(1/freq_sample)
@@ -129,9 +201,61 @@ def preprocess(df, freq_sample=100):
     # Set t_0 to 0
     df['t'] = df['t'] - df.loc[0, 't']
 
+def isolate_wavelengths(df, file_type):
+    """
+    Isolate the wavelengths from the data.
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    file_type (str): The name of the test file.
+    
+    Returns:
+    list: A list of dataframes containing the isolated wavelengths.
+    
+    """
+    # Extract the data from the JSON file
+    extracted_data = combine_data(file_type)
+    # Determine the time stamps for pure test sections (no fade in/out)
+    time_stamps = time_conversion(extracted_data)
+    filtered_dfs = []
+
+    # Iterate through each nested list
+    for time_range in time_stamps:
+        start_time, end_time = time_range
+        
+        # Filter the DataFrame based on the time range
+        filtered_df = df[(df['t'] >= start_time) & (df['t'] <= end_time)]
+        
+        # Append the filtered rows to the list
+        filtered_dfs.append(filtered_df)
+    
+    # Isolate a single wavelength of the commanded acceleration within these pure test dataframes
+    df_list = []
+    for df_slice in filtered_dfs:
+        # Determine zero acceleration points
+        zeroes = find_zero(df_slice, dof='acc_cmd')
+        
+        # Append the slice of the dataframe between the zero acceleration points
+        try:
+            df_list.append(df_slice.loc[zeroes[1]:zeroes[3], :])
+        except:
+            pass
+        
+    return df_list
+
 def plot_dof(df, dof, file_type, interval=None):
     '''
-    Plot position, velocity & acceleration corresponding to a specified DoF for both commanded and measured data. 
+    Plot position, velocity & acceleration corresponding to a specified DoF for both commanded and measured data.
+    
+    Parameters:
+    df (pd.DataFrame): The dataframe containing the data.
+    dof (str): The degree of freedom to be analyzed.
+    file_type (str): The name of test file.
+    interval (list): The interval of indexes to be analyzed.
+    
+    Returns:
+    None
+    
     '''
     if interval == None:
         interval = list(range(0, df.shape[0]))
@@ -180,89 +304,15 @@ def plot_dof(df, dof, file_type, interval=None):
     # Show the figure
     plt.show()
 
-def extract_data_function(file_path):
-    with open(file_path, 'r') as f:
-    # Load the JSON data
-        data = json.load(f)
-    extracted_data = [
-        [move["time"],
-        move["move"]["profile"]["Tfade"],
-        move["move"]["profile"]["Ttotal"],
-        move["move"]["profile"]["omg"],
-        move["move"]["profile"]["gain"],
-        move["move"]["profile"]["phi0"],
-        move["move"]["axis"]]
-        for move in data["moves"] if "profile" in move["move"] and "FadedSineProfile" in move["move"]["profile"]["type"]
-    ]
-    return extracted_data
-
-def time_conversion(extracted_data):
-    time_stamps = []
-    for i in range(0, len(extracted_data)):
-        if len(extracted_data[i][3]) == 1:
-            time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])     
-        else:   
-            time_stamps.append([extracted_data[i][1]+extracted_data[i][0], extracted_data[i][2]+extracted_data[i][0]- extracted_data[i][1]])
-    time_stamps =  [[round(entry * 10**-4, 6) for entry in sublist] for sublist in time_stamps]
-    return time_stamps
-
-file_direct = {
-    "AGARD-AR-144-A" : 'data/json/srs-agard144a.json',
-    "AGARD-AR-144-B": 'data/json/srs-agard144b.json',
-    "AGARD-AR-144-D" : 'data/json/srs-agard144d.json', 
-    "AGARD-AR-144-E" : 'data/json/srs-agard144e.json',
-    "MULTI-SINE-1" : 'data/json/srs-test-motion-sines1.json',
-    "MULTI-SINE-2" : 'data/json/srs-test-motion-sines2.json',
-    "MULTI-SINE-3" : 'data/json/srs-test-motion-sines3.json'
-}
-
-file_type1 = 'MULTI-SINE-1'
-
-extracted_data = extract_data_function(file_direct[file_type1])
-if file_type1 == 'MULTI-SINE-1':
-    extracted_data2 = extract_data_function(file_direct["MULTI-SINE-2"]) 
-    for i in range(len(extracted_data2)):
-        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
-    extracted_data.extend(extracted_data2)
-    extracted_data2 = extract_data_function(file_direct["MULTI-SINE-3"]) 
-    for i in range(len(extracted_data2)):
-        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
-    extracted_data.extend(extracted_data2)
-
-if file_type1 == "AGARD-AR-144-B":
-    extracted_data2 = extract_data_function(file_direct["AGARD-AR-144-E"]) 
-    for i in range(len(extracted_data2)):
-        extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
-    extracted_data.extend(extracted_data2)
-    
-file_dir = {
-    "AGARD-AR-144_A": "data/hdf5/motionlog-20240301_133202.hdf5",
-    "AGARD-AR-144_B+E": "data/hdf5/motionlog-20240301_141239.hdf5",
-    "MULTI-SINE": "data/hdf5/motionlog-20240301_144109.hdf5",
-    "BUMP": "C:/Users/Olafe/studie/project/motionlog-20240301_150040.hdf5",
-    "PMD": "C:/Users/Olafe/studie/project/motionlog-20240301_150320.hdf5",
-}
-
 if __name__ == "__main__":
     dof = 'z'
-    file_type = 'BUMP'
-    df_z = hdf5_to_df(file_dir[file_type], dof)
-    preprocess(df_z)
-    zero = find_zero(df_z)
-    print(zero)
-    plot_dof(df_z, dof, file_type)
-    print(df_z)
+    data = hdf5_to_df('PMD', dof)
+    preprocess(data)
+    apply_filter(data)
+    plot_dof(data, dof, 'PMD')
+    #wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_A')
 
-    time_stamps = time_conversion(extracted_data)
-    filtered_rows = []
-
-    # Iterate through each nested list
-    for time_range in time_stamps:
-        start_time, end_time = time_range
-        
-        # Filter the DataFrame based on the time range
-        filtered_df = df_z[(df_z['t'] >= start_time) & (df_z['t'] <= end_time)]
-        print(filtered_df)
-        
-        # Append the filtered rows to the list
-        filtered_rows.append(filtered_df)
+    #print(wavelengths)
+    #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_cmd'])
+    #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_mes'])
+    #plt.show()
