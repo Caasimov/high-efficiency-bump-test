@@ -93,7 +93,6 @@ def apply_filter(df, window_size=3):
     None
     
     """
-    df['pos_mes'] = medfilt(df['pos_mes'], window_size)
     df['vel_mes'] = medfilt(df['vel_mes'], window_size)
     df['acc_mes'] = medfilt(df['acc_mes'], window_size)
     
@@ -239,7 +238,7 @@ def isolate_wavelengths(df, file_type):
         try:
             df_list.append(df_slice.loc[zeroes[1]:zeroes[3], :])
         except:
-            pass
+            df_list.append(None)
         
     return df_list
 
@@ -306,13 +305,13 @@ def plot_dof(df, dof, file_type, interval=None):
 
 if __name__ == "__main__":
     dof = 'z'
-    data = hdf5_to_df('PMD', dof)
+    data = hdf5_to_df('AGARD-AR-144_B', dof)
     preprocess(data)
     apply_filter(data)
-    plot_dof(data, dof, 'PMD')
-    #wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_A')
-
+    #plot_dof(data, dof, 'AGARD-AR-144_A')
+    wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_B')
+    print(wavelengths)
     #print(wavelengths)
-    #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_cmd'])
-    #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_mes'])
-    #plt.show()
+    plt.plot(wavelengths[-22]['t'], wavelengths[-22]['acc_cmd'])
+    plt.plot(wavelengths[-22]['t'], wavelengths[-22]['acc_mes'])
+    plt.show()

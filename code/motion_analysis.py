@@ -86,25 +86,74 @@ def invert_fft(df, N, sampling_freq=100):
         y += amp*np.sin(2*np.pi*freq*t)
     return t, y
 
+def bump_test_analysis(df, window=(-0.3, 0.3), sampling_freq=100):
+    '''
+    Isolate the bump interval window. 
+
+    Parameters:
+    df: DataFrame containing the frequencies and amplitudes
+    
+    '''
+    
+    # Determine the zero-velocity indexes
+    zeroes = find_zero(df)[:-2]
+    
+    # Determine difference between measured and commanded acceleration
+    df['acc_diff'] = df['acc_mes'] - df['acc_cmd']
+    
+    amplitudes = []
+    accelerations = []
+    
+    for zero in zeroes:
+        interval = df[(df['t'] >= (window[0] + zero/sampling_freq)) & (df['t'] <= (window[1] + zero/sampling_freq))]
+        bump_max = interval['acc_diff'].max()
+        bump_min = interval['acc_diff'].min()
+        amplitudes.append(bump_max - bump_min)
+        accelerations.append(np.abs(df.loc[zero, 'acc_cmd']))
+    
+    return amplitudes, accelerations
+
 if __name__ == "__main__":
     dof = 'z'
-    data = hdf5_to_df('AGARD-AR-144_A', dof)
-    preprocess(data)
-    apply_filter(data)
-    wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_A')
-    agard_transform = fourier_transform(wavelengths)
-    idx_max = agard_transform[0]['amp_cmd'].idxmax()
-    H_ki = agard_transform[0].loc[idx_max, 'amp_mes'] / agard_transform[0].loc[idx_max, 'amp_cmd']
-    print(H_ki)
+    data_bump = hdf5_to_df('BUMP', dof)
+    data_agard = hdf5_to_df('AGARD-AR-144_A', dof)
+    preprocess(data_bump)
+    preprocess(data_agard)
+    apply_filter(data_bump)
+    apply_filter(data_agard)
+    
+    wavelengths = isolate_wavelengths(data_agard, 'AGARD-AR-144_A')
+    
+    bump_amps_AGARD, acc_inp_AGARD = [], []
+    for df in wavelengths:
+        if df is not None:
+            temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_test_analysis(df)
+            bump_amps_AGARD.extend(temp_bump_amps_AGARD)
+            acc_inp_AGARD.extend(temp_acc_inp_AGARD)
+        else:
+            pass
+            
+    bump_amps_BUMP, acc_inp_BUMP = bump_test_analysis(data_bump)
+    bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard)
+    plt.scatter(acc_inp_BUMP, bump_amps_BUMP)
+    plt.scatter(acc_inp_AGARD, bump_amps_AGARD)
+    plt.xlabel('Input Acceleration [m/s^2]')
+    plt.ylabel('Bump Amplitude [m/s^2]')
+    
+    
+
+    #agard_transform = fourier_transform(wavelengths)
+    #idx_max = agard_transform[0]['amp_cmd'].idxmax()
+    #H_ki = agard_transform[0].loc[idx_max, 'amp_mes'] / agard_transform[0].loc[idx_max, 'amp_cmd']
+    #print(H_ki)
     
     #Find the first 5 harmonics
-    harmonics = find_harmonics(agard_transform[0], range(2, 6))
+    #harmonics = find_harmonics(agard_transform[0], range(2, 6))
     
-    N = len(wavelengths[3]['acc_cmd'])
-    t, y = invert_fft(harmonics, N)
+    #N = len(wavelengths[3]['acc_cmd'])
+    #t, y = invert_fft(harmonics, N)
     # plt.plot(agard_transform[0]['freq'], agard_transform[0]['amp_cmd'])
     # plt.plot(agard_transform[0]['freq'], agard_transform[0]['amp_mes'])
-    plt.plot(t, y)
     plt.show()
     #print(wavelengths)
     #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_cmd'])

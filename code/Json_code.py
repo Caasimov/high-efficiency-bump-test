@@ -56,6 +56,8 @@ def create_sine(dt, Tfade, Ttotal, omg, gain, phi0, axis):
         else:
             x = axis * gain * np.sin(omg*(t-dt) + phi0)
             x_val.append(x)
+            
+
     return t_val, x_val
 
 def time_conversion(extracted_data):
@@ -157,6 +159,7 @@ def combine_data(file_type):
     return extracted_data
 
 
+
 def clean_sine(extracted_data):
     """
     Cleans the extracted sine data by removing zero values and combining multiple sine functions.
@@ -196,9 +199,11 @@ def clean_sine(extracted_data):
     return combined_t_values, combined_sine_function
 
 
-if __name__ == "__main__":
-    extracted_data = combine_data("AGARD-AR-144_A")
 
+
+if __name__ == "__main__":
+
+    extracted_data = combine_data("AGARD-AR-144_A")
     combined_t_values, combined_sine_function = clean_sine(extracted_data)
     
     # Plot the combined sine function
