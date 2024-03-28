@@ -154,11 +154,10 @@ def combine_data(file_type):
         for i in range(len(extracted_data2)):
             extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
         # Extend extracted_data with the data from extracted_data2
+        t_critical = extracted_data2[0][0] + 6
         extracted_data.extend(extracted_data2)
         
-    return extracted_data
-
-
+    return extracted_data, t_critical
 
 def clean_sine(extracted_data):
     """
@@ -199,12 +198,31 @@ def clean_sine(extracted_data):
     return combined_t_values, combined_sine_function
 
 
-
-
 if __name__ == "__main__":
 
-    extracted_data = combine_data("AGARD-AR-144_A")
+    extracted_data, t_critical = combine_data("AGARD-AR-144_B")
     combined_t_values, combined_sine_function = clean_sine(extracted_data)
+
+    index = np.where(np.array(combined_t_values) == t_critical)[0][0]
+
+    # Find the portion of the array starting from the index_value
+    portion_of_array = combined_sine_function[index:index + 2000]
+
+    # Find the firxt non-zero value after this point
+    
+    # Start iterating from the specified index
+    for i in range(index, len(combined_sine_function)):
+        if combined_sine_function[i] != 0:
+            index = i
+            break
+
+    print(index)
+    
+    ampl_critical = combined_sine_function[i]
+    critical_point = [t_critical, ampl_critical]
+
+    print(critical_point)
+
     
     # Plot the combined sine function
     plt.plot(combined_t_values, combined_sine_function)
