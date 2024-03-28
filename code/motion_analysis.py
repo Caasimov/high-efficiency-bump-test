@@ -86,7 +86,7 @@ def invert_fft(df, N, sampling_freq=100):
         y += amp*np.sin(2*np.pi*freq*t)
     return t, y
 
-def bump_test_analysis(df, window=(-0.3, 0.3), sampling_freq=100):
+def bump_test_analysis(df, file_type, window=(-0.2, 0.2), sampling_freq=100):
     '''
     Isolate the bump interval window. 
 
@@ -94,9 +94,11 @@ def bump_test_analysis(df, window=(-0.3, 0.3), sampling_freq=100):
     df: DataFrame containing the frequencies and amplitudes
     
     '''
-    
-    # Determine the zero-velocity indexes
-    zeroes = find_zero(df)[:-2]
+    if file_type == 'BUMP':
+        # Determine the zero-velocity indexes
+        zeroes = find_zero(df)[:-2]
+    else:
+        zeroes = find_zero(df)
     
     # Determine difference between measured and commanded acceleration
     df['acc_diff'] = df['acc_mes'] - df['acc_cmd']
@@ -108,8 +110,9 @@ def bump_test_analysis(df, window=(-0.3, 0.3), sampling_freq=100):
         interval = df[(df['t'] >= (window[0] + zero/sampling_freq)) & (df['t'] <= (window[1] + zero/sampling_freq))]
         bump_max = interval['acc_diff'].max()
         bump_min = interval['acc_diff'].min()
-        amplitudes.append(bump_max - bump_min)
-        accelerations.append(np.abs(df.loc[zero, 'acc_cmd']))
+        if bump_max-bump_min < 0.7:
+            amplitudes.append(bump_max - bump_min)
+            accelerations.append(np.abs(df.loc[zero, 'acc_cmd']))
     
     return amplitudes, accelerations
 
@@ -126,22 +129,36 @@ if __name__ == "__main__":
     
     bump_amps_AGARD, acc_inp_AGARD = [], []
     for df in wavelengths:
-        if df is not None:
-            temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_test_analysis(df)
+        # Beyond t=500, the frequency is so high that there is a massive spike in phase difference
+        if df is not None and df['t'].iloc[0] <= 500:
+            temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_test_analysis(df, 'AGARD-AR-144_A')
             bump_amps_AGARD.extend(temp_bump_amps_AGARD)
             acc_inp_AGARD.extend(temp_acc_inp_AGARD)
         else:
             pass
             
-    bump_amps_BUMP, acc_inp_BUMP = bump_test_analysis(data_bump)
-    bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard)
+    bump_amps_BUMP, acc_inp_BUMP = bump_test_analysis(data_bump, 'BUMP')
+    #bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard)
     plt.scatter(acc_inp_BUMP, bump_amps_BUMP)
     plt.scatter(acc_inp_AGARD, bump_amps_AGARD)
     plt.xlabel('Input Acceleration [m/s^2]')
     plt.ylabel('Bump Amplitude [m/s^2]')
     
+    # Add line of best fit for BUMP data
+    z_BUMP = np.polyfit(acc_inp_BUMP, bump_amps_BUMP, 1)
+    #z_BUMP[1] = 0  # Set intercept to 0
+    p_BUMP = np.poly1d(z_BUMP)
+    plt.plot(acc_inp_BUMP, p_BUMP(acc_inp_BUMP), "b--")
+    gradient_BUMP = z_BUMP[0]  # Gradient of the line of best fit for BUMP data
     
-
+    # Add line of best fit for AGARD data
+    z_AGARD = np.polyfit(acc_inp_AGARD, bump_amps_AGARD, 1)
+    #z_AGARD[1] = 0  # Set intercept to 0
+    p_AGARD = np.poly1d(z_AGARD)
+    plt.plot(acc_inp_AGARD, p_AGARD(acc_inp_AGARD), "r--")
+    gradient_AGARD = z_AGARD[0]  # Gradient of the line of best fit for AGARD data
+    
+    print(f"LoBF grad BUMP: {gradient_BUMP}\nLoBF grad AGARD: {gradient_AGARD}")
     #agard_transform = fourier_transform(wavelengths)
     #idx_max = agard_transform[0]['amp_cmd'].idxmax()
     #H_ki = agard_transform[0].loc[idx_max, 'amp_mes'] / agard_transform[0].loc[idx_max, 'amp_cmd']

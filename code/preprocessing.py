@@ -305,13 +305,12 @@ def plot_dof(df, dof, file_type, interval=None):
 
 if __name__ == "__main__":
     dof = 'z'
-    data = hdf5_to_df('AGARD-AR-144_B', dof)
+    data = hdf5_to_df('AGARD-AR-144_A', dof)
     preprocess(data)
     apply_filter(data)
-    #plot_dof(data, dof, 'AGARD-AR-144_A')
-    wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_B')
-    print(wavelengths)
+    plot_dof(data, dof, 'AGARD-AR-144_A')
+    wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_A')
     #print(wavelengths)
-    plt.plot(wavelengths[-22]['t'], wavelengths[-22]['acc_cmd'])
-    plt.plot(wavelengths[-22]['t'], wavelengths[-22]['acc_mes'])
+    plt.plot(wavelengths[26]['t'], wavelengths[26]['acc_cmd'])
+    plt.plot(wavelengths[26]['t'], wavelengths[26]['acc_mes'])
     plt.show()
