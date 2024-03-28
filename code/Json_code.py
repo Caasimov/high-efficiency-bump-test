@@ -204,26 +204,18 @@ if __name__ == "__main__":
     combined_t_values, combined_sine_function = clean_sine(extracted_data)
 
     index = np.where(np.array(combined_t_values) == t_critical)[0][0]
-
-    # Find the portion of the array starting from the index_value
-    portion_of_array = combined_sine_function[index:index + 2000]
-
-    # Find the firxt non-zero value after this point
     
-    # Start iterating from the specified index
+    # Start iterating from the specified index to find firt non-zero value
     for i in range(index, len(combined_sine_function)):
         if combined_sine_function[i] != 0:
             index = i
             break
 
-    print(index)
-    
     ampl_critical = combined_sine_function[i]
     critical_point = [t_critical, ampl_critical]
 
     print(critical_point)
 
-    
     # Plot the combined sine function
     plt.plot(combined_t_values, combined_sine_function)
     plt.title('Plot')
