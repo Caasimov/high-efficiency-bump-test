@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import medfilt
 import h5py
 import os
-from json_code import *
+from Json_code import *
 
 def hdf5_to_df(fname, dof):
     """
@@ -199,6 +199,35 @@ def preprocess(df, freq_sample=100):
     
     # Set t_0 to 0
     df['t'] = df['t'] - df.loc[0, 't']
+
+    #Apply a median filter to the data
+
+    #Size of the window for the median filter
+    window_size = 3
+    
+    df['vel_mes'] = medfilt(df['vel_mes'], window_size)
+    df['acc_mes'] = medfilt(df['acc_mes'], window_size)
+
+    # Define the directory paths
+    directory = 'data'
+    subdirectory = 'pandas'
+    file_name = 'df.csv'
+
+    # Create the directory if it doesn't exist
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Create the subdirectory if it doesn't exist
+    if not os.path.exists(os.path.join(directory, subdirectory)):
+        os.makedirs(os.path.join(directory, subdirectory))
+
+    # Define the full file path
+    file_path = os.path.join(directory, subdirectory, file_name)
+
+    # Save the DataFrame to CSV
+    df.to_csv(file_path, index=False)
+
+    print(f"DataFrame saved to {file_path}")
 
 def isolate_wavelengths(df, file_type):
     """
