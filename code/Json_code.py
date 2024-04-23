@@ -145,9 +145,10 @@ def combine_data(file_type):
             extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
         # Extend extracted_data with the data from extracted_data2
         extracted_data.extend(extracted_data2)
+        return extracted_data
 
     # Check if the current file is srs-agard144b.json
-    if file_directory[file_type] == 'data/json/srs-agard144b.json':
+    elif file_directory[file_type] == 'data/json/srs-agard144b.json':
         # Extract data from srs-agard144e.json
         extracted_data2 = extract_from_json('data/json/srs-agard144e.json') 
         # Adjust the time values of extracted_data2
@@ -156,8 +157,10 @@ def combine_data(file_type):
         # Extend extracted_data with the data from extracted_data2
         t_critical = extracted_data2[0][0] + 6
         extracted_data.extend(extracted_data2)
-        
-    return extracted_data, t_critical
+        return extracted_data, t_critical
+    
+    else:
+        return extracted_data
 
 def clean_sine(extracted_data):
     """
