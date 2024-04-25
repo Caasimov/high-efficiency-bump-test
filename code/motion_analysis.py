@@ -9,7 +9,7 @@ def fourier_transform(df_list, sampling_freq = 100):
     """
     Perform Fourier Transform on all isolated wavelenths.
     
-    Parameters:
+    Args:
     df_list: list of dataframes, each containing a single isolated wavelength
     
     Returns:
@@ -35,18 +35,21 @@ def fourier_transform(df_list, sampling_freq = 100):
         result_df = pd.DataFrame({
             'freq': xf,
             'amp_cmd': amplitude_cmd,
-            'amp_mes': amplitude_mes
+            'amp_mes': amplitude_mes,
+            'cmd_complex': yf_cmd[0:N//2],
+            'mes_complex': yf_mes[0:N//2],
+            'H_ki': yf_mes[0:N//2]/yf_cmd[0:N//2]
         })
         
         result_list.append(result_df)
     
     return result_list
-
+    
 def find_harmonics(df, harmonics_range):
     """
     Find the harmonics of the FFT results.
     
-    Parameters:
+    Args:
     df: DataFrame containing the FFT results
     harmonics_range: range, the range of harmonics to find
     
@@ -71,7 +74,7 @@ def invert_fft(df, N, sampling_freq=100):
     """
     Generate a sum of sine waves based on the frequencies and amplitudes in df.
 
-    Parameters:
+    Args:
     df: DataFrame containing the frequencies and amplitudes
     N: int, the number of samples to generate
 
@@ -86,11 +89,46 @@ def invert_fft(df, N, sampling_freq=100):
         y += amp*np.sin(2*np.pi*freq*t)
     return t, y
 
-def bump_test_analysis(df, file_type, window=(-0.2, 0.2), sampling_freq=100):
+def deBode_diagram(wavelengths, sampling_freq=100, tol=1e-3):
+    """
+    Plot the Bode diagram of the transfer function H_ki.
+
+    Args:
+    df: DataFrame containing the FFT results
+    sampling_freq: int, the sampling frequency of the data
+
+    Returns:
+    None
+    """
+    
+    df_list = fourier_transform(wavelengths)
+    
+    H_ki_list = []
+    freq_list = []
+    for df in df_list:
+        H_ki_list.append(df.loc[1, 'H_ki'])
+        freq_list.append(df.loc[1, 'freq'])
+    
+    print(freq_list)
+    
+    plt.subplot(2, 1, 1)
+    plt.scatter(freq_list[:4], 20*np.log10(np.abs(H_ki_list[:4])))
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Magnitude [dB]')
+    
+    plt.subplot(2, 1, 2)
+    plt.scatter(freq_list[:4], np.angle(H_ki_list[:4], deg=True))
+    plt.xlabel('Frequency [Hz]')
+    plt.ylabel('Phase [deg]')
+    
+    
+
+
+def bump_analysis(df, file_type, window=(-0.2, 0.2), sampling_freq=100):
     '''
     Isolate the bump interval window. 
 
-    Parameters:
+    Args:
     df: DataFrame containing the frequencies and amplitudes
     
     '''
@@ -127,42 +165,55 @@ if __name__ == "__main__":
     
     wavelengths = isolate_wavelengths(data_agard, 'AGARD-AR-144_A')
     
-    bump_amps_AGARD, acc_inp_AGARD = [], []
-    for df in wavelengths:
-        # Beyond t=500, the frequency is so high that there is a massive spike in phase difference
-        if df is not None and df['t'].iloc[0] <= 500:
-            temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_test_analysis(df, 'AGARD-AR-144_A')
-            bump_amps_AGARD.extend(temp_bump_amps_AGARD)
-            acc_inp_AGARD.extend(temp_acc_inp_AGARD)
-        else:
-            pass
+    #deBode_diagram(wavelengths)
+    
+    # bump_amps_AGARD, acc_inp_AGARD = [], []
+    # for df in wavelengths:
+    #     # Beyond t=500, the frequency is so high that there is a massive spike in phase difference
+    #     if df is not None and df['t'].iloc[0] <= 500:
+    #         temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_analysis(df, 'AGARD-AR-144_A')
+    #         bump_amps_AGARD.extend(temp_bump_amps_AGARD)
+    #         acc_inp_AGARD.extend(temp_acc_inp_AGARD)
+    #     else:
+    #         pass
             
-    bump_amps_BUMP, acc_inp_BUMP = bump_test_analysis(data_bump, 'BUMP')
-    #bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard)
-    plt.scatter(acc_inp_BUMP, bump_amps_BUMP)
-    plt.scatter(acc_inp_AGARD, bump_amps_AGARD)
-    plt.xlabel('Input Acceleration [m/s^2]')
-    plt.ylabel('Bump Amplitude [m/s^2]')
+    # bump_amps_BUMP, acc_inp_BUMP = bump_analysis(data_bump, 'BUMP')
+    # #bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard)
+    # plt.scatter(acc_inp_BUMP, bump_amps_BUMP)
+    # plt.scatter(acc_inp_AGARD, bump_amps_AGARD)
+    # plt.xlabel('Input Acceleration [m/s^2]')
+    # plt.ylabel('Bump Amplitude [m/s^2]')
     
-    # Add line of best fit for BUMP data
-    z_BUMP = np.polyfit(acc_inp_BUMP, bump_amps_BUMP, 1)
-    #z_BUMP[1] = 0  # Set intercept to 0
-    p_BUMP = np.poly1d(z_BUMP)
-    plt.plot(acc_inp_BUMP, p_BUMP(acc_inp_BUMP), "b--")
-    gradient_BUMP = z_BUMP[0]  # Gradient of the line of best fit for BUMP data
+    # # Add line of best fit for BUMP data
+    # z_BUMP = np.polyfit(acc_inp_BUMP, bump_amps_BUMP, 1)
+    # #z_BUMP[1] = 0  # Set intercept to 0
+    # p_BUMP = np.poly1d(z_BUMP)
+    # plt.plot(acc_inp_BUMP, p_BUMP(acc_inp_BUMP), "b--")
+    # gradient_BUMP = z_BUMP[0]  # Gradient of the line of best fit for BUMP data
     
-    # Add line of best fit for AGARD data
-    z_AGARD = np.polyfit(acc_inp_AGARD, bump_amps_AGARD, 1)
-    #z_AGARD[1] = 0  # Set intercept to 0
-    p_AGARD = np.poly1d(z_AGARD)
-    plt.plot(acc_inp_AGARD, p_AGARD(acc_inp_AGARD), "r--")
-    gradient_AGARD = z_AGARD[0]  # Gradient of the line of best fit for AGARD data
+    # # Add line of best fit for AGARD data
+    # z_AGARD = np.polyfit(acc_inp_AGARD, bump_amps_AGARD, 1)
+    # #z_AGARD[1] = 0  # Set intercept to 0
+    # p_AGARD = np.poly1d(z_AGARD)
+    # plt.plot(acc_inp_AGARD, p_AGARD(acc_inp_AGARD), "r--")
+    # gradient_AGARD = z_AGARD[0]  # Gradient of the line of best fit for AGARD data
     
-    print(f"LoBF grad BUMP: {gradient_BUMP}\nLoBF grad AGARD: {gradient_AGARD}")
-    #agard_transform = fourier_transform(wavelengths)
+    # print(f"LoBF grad BUMP: {gradient_BUMP}\nLoBF grad AGARD: {gradient_AGARD}")
+    # agard_transform = fourier_transform(wavelengths)
+    # print(agard_transform[0])
+    # test = 7
+    # plt.plot(agard_transform[test]['freq'], np.abs(agard_transform[test]['cmd_complex']))
+    # plt.plot(agard_transform[test]['freq'], np.abs(agard_transform[test]['mes_complex']))
+    
     #idx_max = agard_transform[0]['amp_cmd'].idxmax()
     #H_ki = agard_transform[0].loc[idx_max, 'amp_mes'] / agard_transform[0].loc[idx_max, 'amp_cmd']
     #print(H_ki)
+    n = 3
+    plt.plot(wavelengths[n]['t'], wavelengths[n]['acc_cmd'])
+    plt.plot(wavelengths[n]['t'], wavelengths[n]['acc_mes'])
+    plt.xlabel('Time [s]')
+    plt.ylabel('Acceleration [$m/s^2$]')
+    plt.legend(['Commanded', 'Measured'])
     
     #Find the first 5 harmonics
     #harmonics = find_harmonics(agard_transform[0], range(2, 6))
@@ -171,7 +222,7 @@ if __name__ == "__main__":
     #t, y = invert_fft(harmonics, N)
     # plt.plot(agard_transform[0]['freq'], agard_transform[0]['amp_cmd'])
     # plt.plot(agard_transform[0]['freq'], agard_transform[0]['amp_mes'])
-    plt.show()
+    #plt.show()
     #print(wavelengths)
     #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_cmd'])
     #plt.plot(wavelengths[-10]['t'], wavelengths[-10]['acc_mes'])
