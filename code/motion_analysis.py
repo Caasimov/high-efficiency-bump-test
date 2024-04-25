@@ -166,7 +166,7 @@ if __name__ == "__main__":
     plt.xlabel('Input Acceleration [m/s^2]')
     plt.ylabel('Bump Amplitude [m/s^2]')
     plt.legend()
-    plt.xscale('log')
+    #plt.xscale('log')
     
     # Add line of best fit for BUMP data
     z_BUMP = np.polyfit(acc_inp_BUMP, bump_amps_BUMP, 1)

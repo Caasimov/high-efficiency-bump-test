@@ -54,7 +54,7 @@ def create_sine(dt, Tfade, Ttotal, omg, gain, phi0, axis):
         if t < dt+Tfade or t > (dt+Ttotal-Tfade):
             x_val.append(0)
         else:
-            x = axis * gain * np.sin(omg*(t-dt) + phi0)
+            x = axis * gain * np.sin(omg/(2*np.pi)*(t-dt) + phi0)
             x_val.append(x)
             
 
@@ -75,7 +75,9 @@ def time_conversion(extracted_data):
     for i in range(0, len(extracted_data)):
         # Calculate the start and end time of each move
         start_time = extracted_data[i][1] + extracted_data[i][0]
+        #start_time = extracted_data[0]
         end_time = extracted_data[i][2] + extracted_data[i][0] - extracted_data[i][1]
+        #end_time = extracted_data[2]
         time_stamps.append([start_time, end_time])     
     # Convert the time values to a different format
     #time_stamps = [[round(entry * 10**-4, 6) for entry in sublist] for sublist in time_stamps]
@@ -137,7 +139,6 @@ def combine_data(file_type):
             extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
         # Extend extracted_data with the data from extracted_data2
         extracted_data.extend(extracted_data2)
-        
         # Extract data from srs-test-motion-sines3.json
         extracted_data2 = extract_from_json('data/json/srs-test-motion-sines3.json') 
         # Adjust the time values of extracted_data2
@@ -145,10 +146,9 @@ def combine_data(file_type):
             extracted_data2[i][0] = extracted_data[i][0] + extracted_data[-1][0] + extracted_data[-1][2]
         # Extend extracted_data with the data from extracted_data2
         extracted_data.extend(extracted_data2)
-        return extracted_data
 
     # Check if the current file is srs-agard144b.json
-    elif file_directory[file_type] == 'data/json/srs-agard144b.json':
+    if file_directory[file_type] == 'data/json/srs-agard144b.json':
         # Extract data from srs-agard144e.json
         extracted_data2 = extract_from_json('data/json/srs-agard144e.json') 
         # Adjust the time values of extracted_data2
@@ -160,7 +160,8 @@ def combine_data(file_type):
         return extracted_data, t_critical
     
     else:
-        return extracted_data
+        t_critical = 6
+        return extracted_data, t_critical
 
 def clean_sine(extracted_data):
     """
@@ -202,9 +203,11 @@ def clean_sine(extracted_data):
 
 
 if __name__ == "__main__":
-
-    extracted_data, t_critical = combine_data("AGARD-AR-144_B")
+ 
+    extracted_data, t_critical = combine_data("MULTI-SINE_1")
     combined_t_values, combined_sine_function = clean_sine(extracted_data)
+
+    #print(extracted_data)
 
     index = np.where(np.array(combined_t_values) == t_critical)[0][0]
     
@@ -216,6 +219,7 @@ if __name__ == "__main__":
 
     ampl_critical = combined_sine_function[i]
     critical_point = [t_critical, ampl_critical]
+
 
     print(critical_point)
 
