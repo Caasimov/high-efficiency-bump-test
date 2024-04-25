@@ -242,20 +242,23 @@ def isolate_wavelengths(df, file_type):
     
     """
     # Extract the data from the JSON file
-    extracted_data = combine_data(file_type)
+    extracted_data = combine_data(file_type)[0]
     # Determine the time stamps for pure test sections (no fade in/out)
     time_stamps = time_conversion(extracted_data)
     filtered_dfs = []
 
     # Iterate through each nested list
+    timing = 0 
     for time_range in time_stamps:
-        start_time, end_time = time_range
-        
-        # Filter the DataFrame based on the time range
-        filtered_df = df[(df['t'] >= start_time) & (df['t'] <= end_time)]
-        
-        # Append the filtered rows to the list
-        filtered_dfs.append(filtered_df)
+        if timing % 3 == 0:
+            start_time, end_time = time_range
+            
+            # Filter the DataFrame based on the time range
+            filtered_df = df[(df['t'] >= start_time) & (df['t'] <= end_time)]
+            
+            # Append the filtered rows to the list
+            filtered_dfs.append(filtered_df)
+        timing += 1
     
     # Isolate a single wavelength of the commanded acceleration within these pure test dataframes
     df_list = []
@@ -268,7 +271,7 @@ def isolate_wavelengths(df, file_type):
             df_list.append(df_slice.loc[zeroes[1]:zeroes[3], :])
         except:
             df_list.append(None)
-        
+       
     return df_list
 
 def plot_dof(df, dof, file_type, interval=None):
@@ -334,11 +337,11 @@ def plot_dof(df, dof, file_type, interval=None):
 
 if __name__ == "__main__":
     dof = 'z'
-    data = hdf5_to_df('AGARD-AR-144_A', dof)
+    data = hdf5_to_df('MULTI-SINE', dof)
     preprocess(data)
     apply_filter(data)
-    plot_dof(data, dof, 'AGARD-AR-144_A')
-    wavelengths = isolate_wavelengths(data, 'AGARD-AR-144_A')
+    plot_dof(data, dof, 'MULTI-SINE')
+    wavelengths = isolate_wavelengths(data, 'MULTI-SINE')
     #print(wavelengths)
     plt.plot(wavelengths[26]['t'], wavelengths[26]['acc_cmd'])
     plt.plot(wavelengths[26]['t'], wavelengths[26]['acc_mes'])

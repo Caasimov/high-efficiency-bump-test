@@ -157,54 +157,78 @@ def bump_analysis(df, file_type, window=(-0.2, 0.2), sampling_freq=100):
 if __name__ == "__main__":
     dof = 'z'
     data_bump = hdf5_to_df('BUMP', dof)
-    data_agard = hdf5_to_df('AGARD-AR-144_A', dof)
+    data_agard = hdf5_to_df('MULTI-SINE', dof)
     preprocess(data_bump)
     preprocess(data_agard)
     apply_filter(data_bump)
     apply_filter(data_agard)
     
-    wavelengths = isolate_wavelengths(data_agard, 'AGARD-AR-144_A')
+    wavelengths = isolate_wavelengths(data_agard, 'MULTI-SINE_1')
     
-    #deBode_diagram(wavelengths)
+    bump_amps_AGARD, acc_inp_AGARD = [], []
+    for df in wavelengths:
+        # Beyond t=500, the frequency is so high that there is a massive spike in phase difference
+        if df is not None and df['t'].iloc[0] <= 500:
+            temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_test_analysis(df, 'MULTI-SINE')
+            bump_amps_AGARD.extend(temp_bump_amps_AGARD)
+            acc_inp_AGARD.extend(temp_acc_inp_AGARD)
+        else:
+            pass
+          
+    bump_amps_BUMP, acc_inp_BUMP = bump_test_analysis(data_bump, 'BUMP')
+    bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard, 'MULTI_SINE')
+
+    x_MultiSine = []
+    y_MultiSine = []
+    for i in range(len(bump_amps_AGARD)):
+        if bump_amps_AGARD[i] != 0 and bump_amps_AGARD[i] < 0.2:
+            y_MultiSine.append(bump_amps_AGARD[i])
+            x_MultiSine.append(acc_inp_AGARD[i])
+
+    AGARD_E = []
+    x_AGARD_E = []
+    AGARD_B = []
+    x_AGARD_B = []
+    #for i in range(len(bump_amps_AGARD)):
+        #if bump_amps_AGARD[i] > 0.16:
+            #GARD_E.append(bump_amps_AGARD[i])
+            #x_AGARD_E.append(acc_inp_AGARD[i])
+        #else:
+            #AGARD_B.append(bump_amps_AGARD[i])
+            #x_AGARD_B.append(acc_inp_AGARD[i])
     
-    # bump_amps_AGARD, acc_inp_AGARD = [], []
-    # for df in wavelengths:
-    #     # Beyond t=500, the frequency is so high that there is a massive spike in phase difference
-    #     if df is not None and df['t'].iloc[0] <= 500:
-    #         temp_bump_amps_AGARD, temp_acc_inp_AGARD = bump_analysis(df, 'AGARD-AR-144_A')
-    #         bump_amps_AGARD.extend(temp_bump_amps_AGARD)
-    #         acc_inp_AGARD.extend(temp_acc_inp_AGARD)
-    #     else:
-    #         pass
-            
-    # bump_amps_BUMP, acc_inp_BUMP = bump_analysis(data_bump, 'BUMP')
-    # #bump_amps_AGARD, acc_inp_AGARD = bump_test_analysis(data_agard)
-    # plt.scatter(acc_inp_BUMP, bump_amps_BUMP)
-    # plt.scatter(acc_inp_AGARD, bump_amps_AGARD)
-    # plt.xlabel('Input Acceleration [m/s^2]')
-    # plt.ylabel('Bump Amplitude [m/s^2]')
+    #plt.scatter(x_AGARD_E, AGARD_E, color='orange')
+    plt.scatter(acc_inp_BUMP, bump_amps_BUMP, label="Proposed Method")
+    #plt.scatter(x_AGARD_B, AGARD_B, color='orange', label='AGARD Method')
+    plt.scatter(x_MultiSine, y_MultiSine, color='orange', label='AGARD Method')
+    plt.xlabel('Input Acceleration [m/s^2]')
+    plt.ylabel('Bump Amplitude [m/s^2]')
+    plt.legend()
+    #plt.xscale('log')
     
-    # # Add line of best fit for BUMP data
-    # z_BUMP = np.polyfit(acc_inp_BUMP, bump_amps_BUMP, 1)
-    # #z_BUMP[1] = 0  # Set intercept to 0
-    # p_BUMP = np.poly1d(z_BUMP)
-    # plt.plot(acc_inp_BUMP, p_BUMP(acc_inp_BUMP), "b--")
-    # gradient_BUMP = z_BUMP[0]  # Gradient of the line of best fit for BUMP data
+    # Add line of best fit for BUMP data
+    z_BUMP = np.polyfit(acc_inp_BUMP, bump_amps_BUMP, 1)
+    #z_BUMP[1] = 0  # Set intercept to 0
+    p_BUMP = np.poly1d(z_BUMP)
+    plt.plot(acc_inp_BUMP, p_BUMP(acc_inp_BUMP), "b--")
+    gradient_BUMP = z_BUMP[0]  # Gradient of the line of best fit for BUMP data
     
-    # # Add line of best fit for AGARD data
-    # z_AGARD = np.polyfit(acc_inp_AGARD, bump_amps_AGARD, 1)
-    # #z_AGARD[1] = 0  # Set intercept to 0
-    # p_AGARD = np.poly1d(z_AGARD)
-    # plt.plot(acc_inp_AGARD, p_AGARD(acc_inp_AGARD), "r--")
-    # gradient_AGARD = z_AGARD[0]  # Gradient of the line of best fit for AGARD data
+    # Add line of best fit for AGARD data
+    #z_AGARD = np.polyfit(acc_inp_AGARD, bump_amps_AGARD, 1)
+    z_AGARD = np.polyfit(x_MultiSine, y_MultiSine, 1)
+    #z_AGARD_B = np.polyfit(x_AGARD_B, AGARD_B, 1)
+    #z_AGARD_E = np.polyfit(x_AGARD_E, AGARD_E, 1)
+    #z_AGARD[1] = 0  # Set intercept to 0
+    p_AGARD = np.poly1d(z_AGARD)
+    #p_AGARD_B = np.poly1d(z_AGARD_B)
+    #p_AGARD_E = np.poly1d(z_AGARD_E)
+    plt.plot(acc_inp_AGARD, p_AGARD(acc_inp_AGARD), "r--")
+    #plt.plot(x_AGARD_B, p_AGARD_B(x_AGARD_B), "r--")
+    #plt.plot(x_AGARD_E, p_AGARD_E(x_AGARD_E), "r--")
+    gradient_AGARD = z_AGARD[0]  # Gradient of the line of best fit for AGARD data
     
-    # print(f"LoBF grad BUMP: {gradient_BUMP}\nLoBF grad AGARD: {gradient_AGARD}")
-    # agard_transform = fourier_transform(wavelengths)
-    # print(agard_transform[0])
-    # test = 7
-    # plt.plot(agard_transform[test]['freq'], np.abs(agard_transform[test]['cmd_complex']))
-    # plt.plot(agard_transform[test]['freq'], np.abs(agard_transform[test]['mes_complex']))
-    
+    print(f"LoBF grad BUMP: {gradient_BUMP}\nLoBF grad AGARD: {gradient_AGARD}")
+    #agard_transform = fourier_transform(wavelengths)
     #idx_max = agard_transform[0]['amp_cmd'].idxmax()
     #H_ki = agard_transform[0].loc[idx_max, 'amp_mes'] / agard_transform[0].loc[idx_max, 'amp_cmd']
     #print(H_ki)
