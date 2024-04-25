@@ -53,7 +53,7 @@ def hdf5_to_df(fname, dof):
     # Concatenate the dataframes along the columns axis
     df_cmd = pd.concat(dfs_cmd, axis=1)
     df_mes = pd.concat(dfs_mes, axis=1)
-    
+    df =
     # Rename the columns
     df_cmd.columns = column_names_cmd
     df_mes.columns = column_names_mes
