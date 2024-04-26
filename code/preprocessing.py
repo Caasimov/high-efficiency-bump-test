@@ -24,7 +24,7 @@ def hdf5_to_df(fname, dof):
         "AGARD-AR-144_B+E": "data/hdf5/motionlog-20240301_141239.hdf5",
         "MULTI-SINE": "data/hdf5/motionlog-20240301_144109.hdf5",
         "BUMP": "data/hdf5/motionlog-20240301_150040.hdf5",
-        "PMD": "data/hdf5/motionlog-20240301_150320.hdf5",
+        "PMD": "data/hdf5/motionlog-20240301_150320.hdf5"
     }
     
     paths_cmd = [
@@ -53,7 +53,7 @@ def hdf5_to_df(fname, dof):
     # Concatenate the dataframes along the columns axis
     df_cmd = pd.concat(dfs_cmd, axis=1)
     df_mes = pd.concat(dfs_mes, axis=1)
-    df =
+
     # Rename the columns
     df_cmd.columns = column_names_cmd
     df_mes.columns = column_names_mes
