@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import json
+from typing import List
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt
 from data_handling import DataFramePlus
@@ -50,7 +51,7 @@ def filter(df: pd.DataFrame, col: str, window: int) -> pd.DataFrame:
     
     return df
 
-def load(fname: str, dof: str, overwrite: bool) -> DataFramePlus:
+def load(fname: str, dof: str) -> DataFramePlus:
     """ Load and preprocess HD data
     
     Parameters
@@ -68,35 +69,28 @@ def load(fname: str, dof: str, overwrite: bool) -> DataFramePlus:
     
     colidx_match = {"x": 0, "y": 1, "z": 2, "phi": 3, "theta": 4, "psi": 5}
 
+    df_cmd = DataFramePlus()
+    df_mes_tick = DataFramePlus()
+    df_mes_pos = DataFramePlus()
     
-    # Check if file has already been processed and load it
-    if not overwrite and os.path.exists(f'data/processed/{fname}__{dof}.csv'):
-        df = DataFramePlus()
-        df.read_csv(f'data/processed/{fname}__{dof}.csv', index_col=0)
-        return df
-    else:
-        df_cmd = DataFramePlus()
-        df_mes_tick = DataFramePlus()
-        df_mes_pos = DataFramePlus()
-        
-        paths_cmd = paths_hdf5_cmd(dof)
-        df_cmd.read_hdf5(paths_hdf5_main[fname], paths_cmd)
-        
-        path_mes_tick = dict([list(paths_hdf5_mes.items())[0]])
-        df_mes_tick.read_hdf5(paths_hdf5_main[fname], path_mes_tick)
-        
-        path_mes_pos = dict([list(paths_hdf5_mes.items())[1]])
-        df_mes_pos.read_hdf5(paths_hdf5_main[fname], path_mes_pos, colidx=colidx_match[dof])
-        
-        df_mes = pd.concat([df_mes_tick, df_mes_pos], axis=1)
-        df = pd.merge(df_cmd, df_mes, on='t', how='inner')
-        df = DataFramePlus(df)
-        
-        if dof == 'z':
-            # Invert z-axis
-            df['pos_mes'] *= -1
-        
-        return df
+    paths_cmd = paths_hdf5_cmd(dof)
+    df_cmd.read_hdf5(paths_hdf5_main[fname], paths_cmd)
+    
+    path_mes_tick = dict([list(paths_hdf5_mes.items())[0]])
+    df_mes_tick.read_hdf5(paths_hdf5_main[fname], path_mes_tick)
+    
+    path_mes_pos = dict([list(paths_hdf5_mes.items())[1]])
+    df_mes_pos.read_hdf5(paths_hdf5_main[fname], path_mes_pos, colidx=colidx_match[dof])
+    
+    df_mes = pd.concat([df_mes_tick, df_mes_pos], axis=1)
+    df = pd.merge(df_cmd, df_mes, on='t', how='inner')
+    df = DataFramePlus(df)
+    
+    if dof == 'z':
+        # Invert z-axis
+        df['pos_mes'] *= -1
+    
+    return df
     
 def extract_from_json(file_type: str) -> list:
     """ Extracts relevant data from a JSON file.
@@ -155,7 +149,7 @@ def time_stamps(file_type: str) -> list:
     
     file_directory = {
         "AGARD-AR-144_A": 'data/json/srs-agard144a.json',
-        "AGARD-AR-144_B": 'data/json/srs-agard144b.json',
+        "AGARD-AR-144_B+E": 'data/json/srs-agard144b.json',
         "AGARD-AR-144_D": 'data/json/srs-agard144d.json', 
         "AGARD-AR-144_E": 'data/json/srs-agard144e.json',
         "MULTI-SINE": 'data/json/srs-test-motion-sines1.json',
@@ -165,6 +159,10 @@ def time_stamps(file_type: str) -> list:
     
     if file_type == 'MULTI-SINE':
         comb_data = extract_from_json(f"{file_type}_1")
+    
+    elif file_type == 'AGARD-AR-144_B+E':
+        comb_data = extract_from_json('AGARD-AR-144_B')
+    
     else:
         comb_data = extract_from_json(file_type)
     
@@ -188,7 +186,7 @@ def time_stamps(file_type: str) -> list:
     # Check if the current file is srs-agard144b.json
     elif file_directory[file_type] == 'data/json/srs-agard144b.json':
         # Extract data from srs-agard144e.json
-        comb_data2 = extract_from_json(file_type) 
+        comb_data2 = extract_from_json(f"{file_type[:-3]}E") 
         # Adjust the time values of extracted_data2
         for i in range(len(comb_data2)):
             comb_data2[i][0] = comb_data[i][0] + comb_data[-1][0] + comb_data[-1][2]
@@ -257,6 +255,33 @@ def wavelength(df: pd.DataFrame, col: str) -> list:
             else:
                 skip_next = False
     return mask
+
+def zero_crossings(df: DataFramePlus, col: str) -> tuple:
+    """ Find the zero crossings of a column
+    
+    Parameters
+    __________
+    df: DataFramePlus
+        DataFrame to process
+    col: str
+        Column to find zero crossings of
+    
+    Returns
+    __________
+    crossings_idx: list
+        List of zero crossing indices
+    crossings_t: list
+        List of zero crossing times
+    """
+    crossings_idx = []
+    crossings_t = []
+    for i, row in df.iterrows():
+        if i > df.index[0] and (i-1) in df.index and df.loc[i-1, col] * row[col] < 0:
+            crossings_idx.append(i)
+            crossings_t.append(row['t'])
+    
+    return crossings_idx, crossings_t
+
 
 def plot(df: pd.DataFrame, type='acceleration') -> None:
     """ Plot the data
