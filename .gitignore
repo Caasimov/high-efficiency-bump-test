@@ -3,3 +3,5 @@
 /plots
 code/__pycache__/
 /data/pandas
+data/processed
+.DS_Store

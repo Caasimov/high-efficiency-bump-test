@@ -101,13 +101,8 @@ class DataFramePlus(pd.DataFrame):
         """
         
         mask = func(self, *args, **kwargs)
-        fragments = []
-        start = 0
-        for i, val in enumerate(mask):
-            if val:
-                fragments.append(self.iloc[start:i])
-                start = i
-        fragments.append(self.iloc[start:])
+        true_indices = [i for i, x in enumerate(mask) if x]
+        fragments = [self.iloc[start:end] for start, end in zip([0]+true_indices, true_indices+[None])]
         return fragments
     
     def dydx(self, xcol: str, ycol: str, deriv_name: str) -> None:
@@ -129,26 +124,24 @@ class DataFramePlus(pd.DataFrame):
         
         self.clean()
             
-    def align(self, col1: str, col2: str) -> None:
+    def align(self, col_names: List[str], idx_shift: int) -> None:
         """ Align two columns through cross-correlation
         -> col2 will be shifted to match col1
         
         Parameters
         __________
-        col1: str
-            Column name for the first column
-        col2: str
-            Column name for the second column
+        col_names: List[str]
+            List of column names to align
+        idx_shift: int
+            Index shift for the alignment
         
         Returns
         __________
         None
         
         """
-        shape0 = self.shape
-        
-        lag_idx = self._lag(col1, col2)
-        self[col2] = self[col2].shift(-lag_idx)
+        for col in col_names:
+            self[col] = self[col].shift(-idx_shift)
         self.clean()
             
     def _lag(self, col1: str, col2: str) -> None:
