@@ -40,3 +40,4 @@ paths_json = {
     "MULTI-SINE_2": 'data/json/srs-test-motion-sines2.json',
     "MULTI-SINE_3": 'data/json/srs-test-motion-sines3.json'
 }
+plot_dir = {}

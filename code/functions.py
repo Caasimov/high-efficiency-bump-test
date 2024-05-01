@@ -1,10 +1,10 @@
 import os
 import pandas as pd
 import json
-from typing import List
+from typing import List, Tuple
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt
-from data_handling import DataFramePlus
+from tools import DataFramePlus
 from project_dir import *
 
 def to_seconds(df: pd.DataFrame, col_t: str, sampling_freq=100) -> None:
@@ -133,78 +133,55 @@ def extract_from_json(file_type: str) -> list:
 
     return extracted_data
 
-def time_stamps(file_type: str) -> list:
-    """ Extracts the time stamps from the JSON data.
+def adjust_and_extend(comb_data, file_type):
+    """ Adjust and extend the extracted data
     
     Parameters
     __________
+    comb_data: list
+        List of extracted data
     file_type: str
-        The type of JSON file to extract data from
+        Type of JSON file to extract data from
     
     Returns
     __________
     list
-        A list of time stamps
+        List of extracted data
     """
+    comb_data2 = extract_from_json(file_type)
+    for i in range(len(comb_data2)):
+        comb_data2[i][0] = comb_data[i][0] + comb_data[-1][0] + comb_data[-1][2]
+    comb_data.extend(comb_data2)
+    return comb_data
+
+def time_stamps(file_type: str) -> list:
+    """ Extract time stamps from a JSON file
     
-    file_directory = {
-        "AGARD-AR-144_A": 'data/json/srs-agard144a.json',
-        "AGARD-AR-144_B+E": 'data/json/srs-agard144b.json',
-        "AGARD-AR-144_D": 'data/json/srs-agard144d.json', 
-        "AGARD-AR-144_E": 'data/json/srs-agard144e.json',
-        "MULTI-SINE": 'data/json/srs-test-motion-sines1.json',
-        "MULTI-SINE_2": 'data/json/srs-test-motion-sines2.json',
-        "MULTI-SINE_3": 'data/json/srs-test-motion-sines3.json'
-    }
+    Parameters
+    __________
+    file_type: str
+        Type of JSON file to extract time stamps from
     
+    Returns
+    __________
+    list
+        List of time stamps
+    """
+
     if file_type == 'MULTI-SINE':
         comb_data = extract_from_json(f"{file_type}_1")
-    
     elif file_type == 'AGARD-AR-144_B+E':
         comb_data = extract_from_json('AGARD-AR-144_B')
-    
     else:
         comb_data = extract_from_json(file_type)
-    
-    # Check if the current file is srs-test-motion-sines1.json
-    if file_directory[file_type] == 'data/json/srs-test-motion-sines1.json':
-        # Extract data from srs-test-motion-sines2.json
-        comb_data2 = extract_from_json(f"{file_type}_2") 
-        # Adjust the time values of extracted_data2
-        for i in range(len(comb_data2)):
-            comb_data2[i][0] = comb_data[i][0] + comb_data[-1][0] + comb_data[-1][2]
-        # Extend extracted_data with the data from extracted_data2
-        comb_data.extend(comb_data2)
-        # Extract data from srs-test-motion-sines3.json
-        comb_data2 = extract_from_json(f"{file_type}_3") 
-        # Adjust the time values of extracted_data2
-        for i in range(len(comb_data2)):
-            comb_data2[i][0] = comb_data[i][0] + comb_data[-1][0] + comb_data[-1][2]
-        # Extend extracted_data with the data from extracted_data2
-        comb_data.extend(comb_data2)
 
-    # Check if the current file is srs-agard144b.json
-    elif file_directory[file_type] == 'data/json/srs-agard144b.json':
-        # Extract data from srs-agard144e.json
-        comb_data2 = extract_from_json(f"{file_type[:-3]}E") 
-        # Adjust the time values of extracted_data2
-        for i in range(len(comb_data2)):
-            comb_data2[i][0] = comb_data[i][0] + comb_data[-1][0] + comb_data[-1][2]
-        # Extend extracted_data with the data from extracted_data2
+    if file_type == 'MULTI-SINE':
+        comb_data = adjust_and_extend(comb_data, f"{file_type}_2")
+        comb_data = adjust_and_extend(comb_data, f"{file_type}_3")
+    elif file_type == 'AGARD-AR-144_B+E':
+        comb_data = adjust_and_extend(comb_data, f"{file_type[:-3]}E")
 
-        comb_data.extend(comb_data2)
-      
-    
-    extracted_data = comb_data
-    
-    time_stamps = []
-    for i in range(0, len(extracted_data)):
-        # Calculate the start and end time of each move
-        start_time = extracted_data[i][1] + extracted_data[i][0]
-        #start_time = extracted_data[0]
-        end_time = extracted_data[i][2] + extracted_data[i][0] - extracted_data[i][1]
-        #end_time = extracted_data[2]
-        time_stamps.append([start_time, end_time])     
+    time_stamps = [[data[1] + data[0], data[2] + data[0] - data[1]] for data in comb_data]
     return time_stamps
 
 def no_fade(df: pd.DataFrame, time_ints: list) -> pd.DataFrame:
@@ -222,39 +199,12 @@ def no_fade(df: pd.DataFrame, time_ints: list) -> pd.DataFrame:
     pd.DataFrame
         DataFrame with only the rows between the time intervals
     """
-    
     mask = pd.Series(False, index = df.index)
     
     for start, end in time_ints:
         mask |= (df['t'] >= start) & (df['t'] <= end)
     
     return df[mask]
-
-def wavelength(df: pd.DataFrame, col: str) -> list:
-    """ Find the zero crossing of a column
-    
-    Parameters
-    __________
-    df: pd.DataFrame
-        DataFrame to process
-    col: str
-        Column to find zero crossing of
-    
-    Returns
-    __________
-    list
-        Mask with True on zero crossings, False elsewhere
-    """
-    mask = [False] * len(df)
-    skip_next = False
-    for i in range(1, len(df)):
-        if df.iloc[i-1][col] * df.iloc[i][col] <= 0 and not (df.iloc[i-1][col] == 0 and df.iloc[i][col] == 0):
-            if not skip_next:
-                mask[i] = True
-                skip_next = True
-            else:
-                skip_next = False
-    return mask
 
 def zero_crossings(df: DataFramePlus, col: str) -> tuple:
     """ Find the zero crossings of a column
@@ -282,6 +232,33 @@ def zero_crossings(df: DataFramePlus, col: str) -> tuple:
     
     return crossings_idx, crossings_t
 
+def wavelength(df: pd.DataFrame, l_bound:int, idx_zeros: list, time_stamps: List[tuple]) -> Tuple[int, bool]:
+    """ Determine if the column on a given interval is a wavelength
+    
+    Parameters
+    __________
+    df: pd.DataFrame
+        DataFrame to process
+    idx_zeros: list
+        List of the indexes of zero crossings
+    time_stamps: List[tuple]
+        List of time stamps for pure signal
+    
+    Returns
+    __________
+    Tuple[int, bool]
+        Tuple containing the new lower bound and a flag indicating if it is a wavelength
+    """
+    for i in range(len(idx_zeros) - 2):
+        if idx_zeros[i] in df.index and idx_zeros[i+1] in df.index and idx_zeros[i+2] in df.index:
+            start_t = df.loc[idx_zeros[i], 't']
+            end_t = df.loc[idx_zeros[i+2], 't']
+            for start, end in time_stamps:
+                if start_t >= start and end_t <= end:
+                    return idx_zeros[i], True
+            return idx_zeros[i+1], False
+            
+    return l_bound, False
 
 def plot(df: pd.DataFrame, type='acceleration') -> None:
     """ Plot the data

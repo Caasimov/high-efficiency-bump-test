@@ -1,11 +1,18 @@
-import numpy as np
-import functions as fn
 import os
-from data_handling import DataFramePlus
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+import functions as fn
 from typing import List
 
-def preprocess(TARGET: str, DOF: str, overwrite: bool) -> List[DataFramePlus]:
+from tools import DataFramePlus
+
+
+
+### DEFAULTS ###
+pd.options.mode.chained_assignment = None
+
+def preprocess(TARGET: str, DOF: str, overwrite: bool, prune=True) -> List[DataFramePlus]:
     """ Preprocess data for analysis
     
     Parameters
@@ -14,6 +21,10 @@ def preprocess(TARGET: str, DOF: str, overwrite: bool) -> List[DataFramePlus]:
         Target pseudonym
     DOF: str
         Degree of freedom
+    overwrite: bool
+        Overwrite existing data
+    prune: bool
+        Prune data to remove fade-in and fade-out
     
     Returns
     __________
@@ -32,8 +43,9 @@ def preprocess(TARGET: str, DOF: str, overwrite: bool) -> List[DataFramePlus]:
         df['pos_mes'] += df._offset('pos_cmd', 'pos_mes')
         df.align(['pos_mes', 'vel_mes', 'acc_mes'], df._lag('acc_cmd', 'acc_mes'))
         fn.filter(df, 'acc_mes', 3)
-        time_stamps = fn.time_stamps(TARGET)
-        df = DataFramePlus(fn.no_fade(df, time_ints=time_stamps))
+        if prune:
+            time_stamps = fn.time_stamps(TARGET)
+            df = DataFramePlus(fn.no_fade(df, time_ints=time_stamps))
         df.smart_save(f"data/processed/{TARGET}__{DOF}.csv")
     return df
 
@@ -83,31 +95,45 @@ def bump_analysis(df: DataFramePlus, tol: float, sep=True, cutoff=0.06) -> List[
 
 if __name__ == '__main__':
     
-    TARGET = 'MULTI-SINE'
+    TARGET = 'AGARD-AR-144_A'
     DOF = 'z'
     
     top_bumps, bottom_bumps = [], []
-    df_main = preprocess(TARGET, DOF, overwrite=False)      
+    # df_main = preprocess(TARGET, DOF, overwrite=True, prune=False)
+    # fn.plot(df_main)
+    df_main = preprocess(TARGET, DOF, overwrite=False, prune=False)
+    time_stamps = fn.time_stamps(TARGET)
+    idx_zeros, time_zeros = fn.zero_crossings(df_main, 'acc_cmd')
+    fn.plot(df_main)
     if TARGET != 'MULTI-SINE':
-
-        wls = df_main.fragment(fn.wavelength, 'acc_cmd')[1: -1]
+        wls = df_main.fragment(fn.wavelength, idx_zeros, time_stamps)
         for wl in wls:
+            fn.plot(wl)
             top, bottom = bump_analysis(wl, 0.2)
             top_bumps.extend(top)
             bottom_bumps.extend(bottom)
     else:
         top_bumps, bottom_bumps = bump_analysis(df_main, 0.2)
     
-    x = [item[1] for item in bottom_bumps]
-    y = [item[0] for item in bottom_bumps]
-    plt.scatter(x, y)
+    x_t = [item[1] for item in top_bumps]
+    y_t = [item[0] for item in top_bumps]
+    x_b = [item[1] for item in bottom_bumps]
+    y_b = [item[0] for item in bottom_bumps]
+    
+    
+    plt.scatter(x_t, y_t, color='blue', label='Positive Acceleration')
+    plt.scatter(x_b, y_b, color='red', label='Negative Acceleration')
     plt.xlabel('Input Amplitude')
     plt.ylabel('Bump Magnitude')
-    plt.title('Top Bumps')
-    
+
     # Add dashed trendline
-    z = np.polyfit(x, y, 1)
-    p = np.poly1d(z)
-    plt.plot(x, p(x), '--')
-    
+    z_t = np.polyfit(x_t, y_t, 1)
+    p_t = np.poly1d(z_t)
+    z_b = np.polyfit(x_b, y_b, 1)
+    p_b = np.poly1d(z_b)
+
+    plt.plot(x_t, p_t(x_t), 'b--')
+    plt.plot(x_b, p_b(x_b), 'r--')
+    plt.legend()
+
     plt.show()

@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import h5py
-from typing import Callable, List, Any
+from typing import Callable, List, Tuple, Any
 
 class DataFramePlus(pd.DataFrame):
     """ Custom DataFrame class with additional functionality """
@@ -86,23 +86,32 @@ class DataFramePlus(pd.DataFrame):
         self.dropna(inplace=True)
         self.reset_index(drop=True, inplace=True)
     
-    def fragment(self, func: Callable[[pd.DataFrame, Any], List[bool]], *args, **kwargs) -> List[pd.DataFrame]:
+    def fragment(self, func: Callable[[pd.DataFrame, int, Any], Tuple[int, bool]], *args, **kwargs) -> List[pd.DataFrame]:
         """ Fragment DataFrame into a list of smaller DataFrames
         
         Parameters
         __________
         func: Callable
-            Row-based logic to fragment the DataFrame, returns True/False list
+            Interval-based logic to fragment the DataFrame, returns True on split and starting index
             
         Returns
         __________
         List[pandas.DataFrame]
             List of DataFrames
         """
+        l_bound = self.index[0]
+        MAX = self.index[-1]
+        u_bound = l_bound + 1
+        fragments = []
         
-        mask = func(self, *args, **kwargs)
-        true_indices = [i for i, x in enumerate(mask) if x]
-        fragments = [self.iloc[start:end] for start, end in zip([0]+true_indices, true_indices+[None])]
+        while u_bound <= MAX:
+            l_bound, flag = func(self[l_bound:u_bound], l_bound, *args, **kwargs)
+            if flag:
+                fragments.append(self[l_bound:u_bound])
+                print(f'Fragmented at {l_bound}')
+                l_bound = u_bound
+            u_bound += 1
+            
         return fragments
     
     def dydx(self, xcol: str, ycol: str, deriv_name: str) -> None:

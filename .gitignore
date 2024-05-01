@@ -1,7 +1,5 @@
-/data/log
-/data/hdf5
-/plots
+/data/hdf5/*
+/data/processed/*
+/plots/*
 code/__pycache__/
-/data/pandas
-data/processed
 .DS_Store
