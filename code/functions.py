@@ -1,7 +1,9 @@
 import os
 import pandas as pd
+import numpy as np
 import json
 from typing import List, Tuple
+import matplotlib
 import matplotlib.pyplot as plt
 from scipy.signal import medfilt
 from tools import DataFramePlus
@@ -106,17 +108,9 @@ def extract_from_json(file_type: str) -> list:
         A list of extracted data
     """
     
-    file_path = {
-        "AGARD-AR-144_A": 'data/json/srs-agard144a.json',
-        "AGARD-AR-144_B": 'data/json/srs-agard144b.json',
-        "AGARD-AR-144_D": 'data/json/srs-agard144d.json', 
-        "AGARD-AR-144_E": 'data/json/srs-agard144e.json',
-        "MULTI-SINE_1": 'data/json/srs-test-motion-sines1.json',
-        "MULTI-SINE_2": 'data/json/srs-test-motion-sines2.json',
-        "MULTI-SINE_3": 'data/json/srs-test-motion-sines3.json'
-        }
+    file_path = paths_json[file_type]
     
-    with open(file_path[file_type], 'r') as f:
+    with open(file_path, 'r') as f:
         # Load the JSON data
         data = json.load(f)
     
@@ -232,17 +226,23 @@ def zero_crossings(df: DataFramePlus, col: str) -> tuple:
     
     return crossings_idx, crossings_t
 
-def wavelength(df: pd.DataFrame, l_bound:int, idx_zeros: list, time_stamps: List[tuple]) -> Tuple[int, bool]:
+def wavelength(df: DataFramePlus, l_bound:int, idx_zeros: list, time_stamps: List[tuple], phase_threshold: float, col='acc_cmd') -> Tuple[int, bool]:
     """ Determine if the column on a given interval is a wavelength
     
     Parameters
     __________
     df: pd.DataFrame
         DataFrame to process
+    l_bound: int
+        Lower bound of the interval
     idx_zeros: list
         List of the indexes of zero crossings
     time_stamps: List[tuple]
         List of time stamps for pure signal
+    phase_threshold: float
+        Amplitude threshold for the phase
+    col: str
+        Column to process (default='acc_cmd')
     
     Returns
     __________
@@ -250,7 +250,8 @@ def wavelength(df: pd.DataFrame, l_bound:int, idx_zeros: list, time_stamps: List
         Tuple containing the new lower bound and a flag indicating if it is a wavelength
     """
     for i in range(len(idx_zeros) - 2):
-        if idx_zeros[i] in df.index and idx_zeros[i+1] in df.index and idx_zeros[i+2] in df.index:
+        idx_check = round(idx_zeros[i] + (idx_zeros[i+1] - idx_zeros[i]) / 2)
+        if (idx_zeros[i] in df.index and idx_zeros[i+1] in df.index and idx_zeros[i+2] in df.index) and round(df.loc[idx_check, col], 3) != 0.0 and abs((df.loc[idx_zeros[i], col] - df.loc[idx_zeros[i], "acc_mes"])/df["acc_cmd"].max())*100 < phase_threshold:
             start_t = df.loc[idx_zeros[i], 't']
             end_t = df.loc[idx_zeros[i+2], 't']
             for start, end in time_stamps:
@@ -260,8 +261,35 @@ def wavelength(df: pd.DataFrame, l_bound:int, idx_zeros: list, time_stamps: List
             
     return l_bound, False
 
-def plot(df: pd.DataFrame, type='acceleration') -> None:
-    """ Plot the data
+def save(fig: matplotlib.figure.Figure, fig_type: str, fname: str) -> None:
+    """ Save the figure
+    
+    Parameters
+    __________
+    fig: matplotlib.figure.Figure
+        Figure to save
+    fig_type: str
+        Type of figure to save
+    fname: str
+        File name to save the figure
+    
+    Returns
+    __________
+    None
+    """
+    fpath = f"{paths_plots[fig_type]}{fname}.png"
+    if not fname:
+        fname = input("Enter file name: ")
+    if os.path.exists(fpath):
+            check = input("File already exists. Overwrite? [y/n]: ")
+            if check.lower() == 'n':
+                return
+        
+    fig.savefig(fpath)
+    
+
+def plot_signal(df: pd.DataFrame, type='acceleration', save_check=False, fname=None) -> None:
+    """ Plot the full signal
     
     Parameters
     __________
@@ -269,15 +297,72 @@ def plot(df: pd.DataFrame, type='acceleration') -> None:
         DataFrame to plot
     type: str
         Type of data to plot
+    save_check: bool
+        Flag to save the plot
+    fname: str
+        File name to save the plot
     
     Returns
     __________
     None
     """
-    plt.plot(df['t'], df[f'{type[:3]}_mes'], label=f'Measured {type.capitalize()}', color='red')
-    plt.plot(df['t'], df[f'{type[:3]}_cmd'], label=f'Commanded {type.capitalize()}', color='blue')
-    plt.xlabel('Time [s]')
-    plt.ylabel(f'{type.capitalize()} [$m/s^2$]')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(df['t'], df[f'{type[:3]}_mes'], label=f'Measured {type.capitalize()}', color='red')
+    ax.plot(df['t'], df[f'{type[:3]}_cmd'], label=f'Commanded {type.capitalize()}', color='blue')
+    ax.xlabel('Time [s]')
+    ax.ylabel(f'{type.capitalize()} [$m/s^2$]')
+    
+    ax.legend()
+    ax.grid(True)
+    
+    if not save_check:
+        plt.show()
+    else:
+        save(fig, "signal", fname)
+
+def plot_IO(x_b: list, y_b: list, x_t: list, y_t: list, trend=True, save_check=True, fname=None) -> None:
+    """ Plot the input-output data
+    
+    Parameters
+    __________
+    x_b: list
+        List of input data for the bottom sine
+    y_b: list
+        List of output data for the bottom sine
+    x_t: list
+        List of input data for the top sine
+    y_t: list
+        List of output data for the top sine
+    trend: bool
+        Flag to plot the trendline
+    save: bool
+        Flag to save the plot
+    fname: str
+        File name to save the plot
+    
+    Returns
+    __________
+    None
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.scatter(x_t, y_t, color='blue', label='Positive Acceleration', marker='x')
+    ax.scatter(x_b, y_b, color='red', label='Negative Acceleration', marker='x')
+    ax.xlabel('Input Amplitude')
+    ax.ylabel('Bump Magnitude')
+    
+    if trend:
+        # Add dashed trendline
+        z_t = np.polyfit(x_t, y_t, 1)
+        p_t = np.poly1d(z_t)
+        z_b = np.polyfit(x_b, y_b, 1)
+        p_b = np.poly1d(z_b)
+
+        ax.plot(x_t, p_t(x_t), 'b--')
+        ax.plot(x_b, p_b(x_b), 'r--')
+        
+    ax.legend()
+    ax.grid(True)
+    if not save_check:
+        plt.show()
+    else:
+        save(fig, "I/O", fname)

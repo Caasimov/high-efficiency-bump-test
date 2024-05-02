@@ -95,20 +95,17 @@ def bump_analysis(df: DataFramePlus, tol: float, sep=True, cutoff=0.06) -> List[
 
 if __name__ == '__main__':
     
-    TARGET = 'AGARD-AR-144_A'
+    TARGET = 'BUMP'
     DOF = 'z'
     
     top_bumps, bottom_bumps = [], []
-    # df_main = preprocess(TARGET, DOF, overwrite=True, prune=False)
-    # fn.plot(df_main)
     df_main = preprocess(TARGET, DOF, overwrite=False, prune=False)
-    time_stamps = fn.time_stamps(TARGET)
     idx_zeros, time_zeros = fn.zero_crossings(df_main, 'acc_cmd')
-    fn.plot(df_main)
-    if TARGET != 'MULTI-SINE':
-        wls = df_main.fragment(fn.wavelength, idx_zeros, time_stamps)
+
+    if TARGET not in ('MULTI-SINE', 'BUMP'):
+        time_stamps = fn.time_stamps(TARGET)
+        wls = df_main.fragment(fn.wavelength, idx_zeros, time_stamps, phase_threshold=10.0)
         for wl in wls:
-            fn.plot(wl)
             top, bottom = bump_analysis(wl, 0.2)
             top_bumps.extend(top)
             bottom_bumps.extend(bottom)
@@ -121,8 +118,8 @@ if __name__ == '__main__':
     y_b = [item[0] for item in bottom_bumps]
     
     
-    plt.scatter(x_t, y_t, color='blue', label='Positive Acceleration')
-    plt.scatter(x_b, y_b, color='red', label='Negative Acceleration')
+    plt.scatter(x_t, y_t, color='blue', label='Positive Acceleration', marker='x')
+    plt.scatter(x_b, y_b, color='red', label='Negative Acceleration', marker='x')
     plt.xlabel('Input Amplitude')
     plt.ylabel('Bump Magnitude')
 
@@ -135,5 +132,5 @@ if __name__ == '__main__':
     plt.plot(x_t, p_t(x_t), 'b--')
     plt.plot(x_b, p_b(x_b), 'r--')
     plt.legend()
-
+    plt.grid(True)
     plt.show()

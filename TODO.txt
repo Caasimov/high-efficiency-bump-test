@@ -1,21 +1,21 @@
-1. Exclude motionless sections:
-    a) Either issue in JSON processing signalling valid sections when it shouldn't.
-    b) OR issue with wavelength/zero_crossings function in functions.py:
-        i. If so, try adding a check in either function for somewhere in the middle of the interval if i and i+1 == 0.
+1. Multi-sine:
+    a) Check whether the zero-crossing method can be made to work (extend interval to include whole thing maybe??)
+    b) Fourier analysis for de Bode plots.
 
-2. Ensure bump files can be accurately read and analyzed given current implementation of bump_analysis in main.py.
+2. Investigate growing frequency/phase disparity at high f_0 for AGARD files.
 
-3. Switch to pure Fourier analysis for multi-sine files.
-
-4. Investigate growing frequency/phase disparity at high f_0 for AGARD files.
-
-5. Implement de Bode diagram with revised wavelength function:
+3. Implement de Bode diagram with revised wavelength function:
     a) Should have fewer issues with finding a suitable wavelength so try direct lift from main branch.
     b) If that fails, rewrite &/ troubleshoot with René.
 
-6. Investigate a method for saving fragment locations to reduce runtime.
+4. Investigate a method for saving fragment locations to reduce runtime.
 
-7. Plotting:
+5. Plotting:
     a) Add new directories to project_dir.py for various plots.
     b) Add either universal plot function or brute-force (lazy).
     c) Agree on std format for plots -> churn out results.
+
+6. Trendline for z-pos, z-neg and x for AGARD test to determine where the slope differences come from &/ effect of gravity
+
+7. Get R^2 for all trendlines.
+

@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import h5py
 from typing import Callable, List, Tuple, Any
+from tqdm import tqdm
 
 class DataFramePlus(pd.DataFrame):
     """ Custom DataFrame class with additional functionality """
@@ -86,7 +87,7 @@ class DataFramePlus(pd.DataFrame):
         self.dropna(inplace=True)
         self.reset_index(drop=True, inplace=True)
     
-    def fragment(self, func: Callable[[pd.DataFrame, int, Any], Tuple[int, bool]], *args, **kwargs) -> List[pd.DataFrame]:
+    def fragment(self, func: Callable[[pd.DataFrame, str, int, Any], Tuple[int, bool]], *args, **kwargs) -> List[pd.DataFrame]:
         """ Fragment DataFrame into a list of smaller DataFrames
         
         Parameters
@@ -103,15 +104,18 @@ class DataFramePlus(pd.DataFrame):
         MAX = self.index[-1]
         u_bound = l_bound + 1
         fragments = []
-        
-        while u_bound <= MAX:
-            l_bound, flag = func(self[l_bound:u_bound], l_bound, *args, **kwargs)
-            if flag:
-                fragments.append(self[l_bound:u_bound])
-                print(f'Fragmented at {l_bound}')
-                l_bound = u_bound
-            u_bound += 1
-            
+        prev_l_bound = l_bound
+
+        with tqdm(total=MAX, desc="Fragmenting DataFrame", bar_format="{desc}: |{bar}| {percentage:.1f}%") as pbar:
+            while u_bound <= MAX:
+                l_bound, flag = func(self[l_bound:u_bound], l_bound, *args, **kwargs)
+                if flag:
+                    fragments.append(self[l_bound:u_bound])
+                    l_bound = u_bound
+                u_bound += 1
+                pbar.update(l_bound - prev_l_bound)
+                prev_l_bound = l_bound
+        tqdm.write(f"Fragmentation complete. {len(fragments)} fragments found.")
         return fragments
     
     def dydx(self, xcol: str, ycol: str, deriv_name: str) -> None:
@@ -128,7 +132,7 @@ class DataFramePlus(pd.DataFrame):
         __________
         None
         """
-        shape0 = self.shape
+
         self[deriv_name] = (self[ycol].shift(-1) - self[ycol].shift(1)) / (self[xcol].shift(-1) - self[xcol].shift(1))
         
         self.clean()
@@ -152,6 +156,14 @@ class DataFramePlus(pd.DataFrame):
         for col in col_names:
             self[col] = self[col].shift(-idx_shift)
         self.clean()
+    
+    def FFT(self):
+        """ Generate FFT of selected columns of DataFrame
+        
+        Parameters
+        __________
+        """
+        
             
     def _lag(self, col1: str, col2: str) -> None:
         """ Calculate the lag between two columns
