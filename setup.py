@@ -4,7 +4,7 @@ def get_data(url: str, output: str, type: str) -> None:
     """ Download data from Google Drive
     """
     # File download
-    gdown.download(url, output, quiet=False)
+    gdown.download(url, output, quiet=False, fuzzy=True)
     
     # Unzip the data
     with zipfile.ZipFile(output, 'r') as zip_ref:
