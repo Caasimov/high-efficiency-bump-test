@@ -48,11 +48,11 @@ def build_directories() -> None:
 
 if __name__ == "__main__":
     # HDF5 data
-    url_hdf5 = "https://drive.google.com/drive/folders/1h7XJ1OzCvXu0b7K2q5hQPN3q4LqJXRqz?usp=drive_link"
+    url_hdf5 = "https://drive.google.com/drive/folders/1h7XJ1OzCvXu0b7K2q5hQPN3q4LqJXRqz"
     output_hdf5 = "data/raw/data_hdf5.zip"
     
     # JSON data
-    url_json = "https://drive.google.com/drive/folders/1h0x7Jn7W6TJJCDGG7Fvy_36UdWWdjAbW?usp=drive_link"
+    url_json = "https://drive.google.com/drive/folders/1h0x7Jn7W6TJJCDGG7Fvy_36UdWWdjAbW"
     output_json = "data/raw/data_json.zip"
     
     # Get necessary packages
