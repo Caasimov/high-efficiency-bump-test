@@ -1,19 +1,56 @@
 import os
 
-def get_data(url: str, output: str, type: str) -> None:
+def get_data(url: str, output: str, type: Optional[str]=None) -> None:
     """ Download data from Google Drive
-    """
-    # File download
-    gdown.download(url, output, quiet=False, fuzzy=True)
     
+    Parameters
+    __________
+    url: str
+        URL to download data from
+    output: str
+        Output file path
+    type: Optional[str]
+        Type of data to download
+    
+    Returns
+    __________
+    None
+    """
+    if type is not None and not isinstance(type, str):
+        raise ValueError("`type` must be a string")
+
+    # File download
+    try:
+        gdown.download(url, output, quiet=False, fuzzy=True)
+    except Exception as e:
+        print(f"Failed to download file: {e}")
+        return
+
     # Unzip the data
-    with zipfile.ZipFile(output, 'r') as zip_ref:
-        file_names = zip_ref.namelist()
-        with tqdm(total=len(file_names), desc=f"Extracting {type.upper()} files", unit="file") as pbar:
-            for file in file_names:
-                zip_ref.extract(file, f"data/raw/{type}")
-                pbar.update()
-    print(f"{type.upper()} data downloaded and extracted to {output}.")
+    try:
+        with zipfile.ZipFile(output, 'r') as zip_ref:
+            file_names = zip_ref.namelist()
+            extraction_path = os.path.join("data", "raw", type if type else "")
+            os.makedirs(extraction_path, exist_ok=True)
+            with tqdm(total=len(file_names), desc=f"Extracting {type.upper() if type else 'files'}", unit="file") as pbar:
+                for file in file_names:
+                    zip_ref.extract(file, extraction_path)
+                    pbar.update()
+    except zipfile.BadZipFile:
+        print(f"Invalid zip file: {output}")
+        return
+    except Exception as e:
+        print(f"Failed to extract files: {e}")
+        return
+
+    # Remove temp zip file
+    try:
+        os.remove(output)
+    except Exception as e:
+        print(f"Failed to remove temp zip file: {e}")
+        return
+
+    print(f"{type.upper() if type else 'Files'} downloaded and extracted to {extraction_path}.")
         
 def build_directories() -> None:
     """ Build directories for data storage
@@ -48,11 +85,11 @@ def build_directories() -> None:
 
 if __name__ == "__main__":
     # HDF5 data
-    url_hdf5 = "https://drive.google.com/drive/folders/1h7XJ1OzCvXu0b7K2q5hQPN3q4LqJXRqz"
+    url_hdf5 = "https://drive.google.com/uc?export=download&id=1OpUBaBFCn3mmfZF4MF4V9KhdqmCFHf64"
     output_hdf5 = "data/raw/data_hdf5.zip"
     
     # JSON data
-    url_json = "https://drive.google.com/drive/folders/1h0x7Jn7W6TJJCDGG7Fvy_36UdWWdjAbW"
+    url_json = "https://drive.google.com/uc?export=download&id=16JsuEAAvFSSeL6r64ZpznrSsF82iM3No"
     output_json = "data/raw/data_json.zip"
     
     # Get necessary packages
@@ -61,6 +98,7 @@ if __name__ == "__main__":
     import gdown
     import zipfile
     from tqdm import tqdm
+    from typing import Optional
     
     # Build required directories
     build_directories()
