@@ -35,12 +35,13 @@ def get_data(url: str, output: str, type: str=None) -> None:
     try:
         with zipfile.ZipFile(output, 'r') as zip_ref:
             file_names = zip_ref.namelist()
-            extraction_path = os.path.join("data", "raw", type if type else "")
+            extraction_path = output.split(f'/{type}.zip')[0]
             os.makedirs(extraction_path, exist_ok=True)
             with tqdm(total=len(file_names), desc=f"Extracting {type.upper() if type else 'files'}", unit="file") as pbar:
                 for file in file_names:
-                    zip_ref.extract(file, extraction_path)
-                    pbar.update()
+                    if "__MACOSX" not in file and not file.endswith("Thumbs.db") and not file.startswith('.'):
+                        zip_ref.extract(file, extraction_path)
+                        pbar.update()
     except zipfile.BadZipFile:
         print(f"Invalid zip file: {output}")
         return
@@ -91,11 +92,11 @@ def build_directories() -> None:
 if __name__ == "__main__":
     # HDF5 data
     url_hdf5 = "https://drive.google.com/uc?export=download&id=1OpUBaBFCn3mmfZF4MF4V9KhdqmCFHf64"
-    output_hdf5 = "data/raw/data_hdf5.zip"
+    output_hdf5 = "data/raw/hdf5.zip"
     
     # JSON data
     url_json = "https://drive.google.com/uc?export=download&id=16JsuEAAvFSSeL6r64ZpznrSsF82iM3No"
-    output_json = "data/raw/data_json.zip"
+    output_json = "data/raw/json.zip"
     
     # Get necessary packages
     os.system("pip install -r requirements.txt")
