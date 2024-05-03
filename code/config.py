@@ -1,10 +1,20 @@
+### CONSTANTS ###
+
+c1 = 'blue'
+c2 = 'red'
+marker = 'x'
+linestyle1 = '--'
+figsize = (8, 5)
+
+### FILEPATHS ###
+
 paths_hdf5_main = {
     "AGARD-AR-144_A": "data/raw/hdf5/motionlog-20240301_133202.hdf5",
     "AGARD-AR-144_B+E": "data/raw/hdf5/motionlog-20240301_141239.hdf5",
-    "MULTI-SINE": "data/hdf5/raw/motionlog-20240301_144109.hdf5",
-    "BUMP": "data/hdf5/raw/motionlog-20240301_150040.hdf5",
-    "BUMP+": "data/hdf5/raw/motionlog-20240425_091135.hdf5",
-    "PMD": "data/hdf5/raw/motionlog-20240301_150320.hdf5"
+    "MULTI-SINE": "data/raw/hdf5/motionlog-20240301_144109.hdf5",
+    "BUMP": "data/raw/hdf5/motionlog-20240301_150040.hdf5",
+    "BUMP+": "data/raw/hdf5/motionlog-20240425_091135.hdf5",
+    "PMD": "data/raw/hdf5/motionlog-20240301_150320.hdf5"
     }
 
 def paths_hdf5_cmd(dof: str) -> dict:
@@ -45,5 +55,7 @@ paths_json = {
 }
 paths_plots = {
     "I/O": "plots/IO",
-    "signal": "plots/signals"
+    "signal": "plots/signals",
+    "deBode": "plots/deBode",
+    "spectrum": "plots/spectra"
     }

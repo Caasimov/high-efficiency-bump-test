@@ -1,7 +1,4 @@
 import os
-import gdown
-import zipfile
-from tqdm import tqdm
 
 def get_data(url: str, output: str, type: str) -> None:
     """ Download data from Google Drive
@@ -60,6 +57,10 @@ if __name__ == "__main__":
     
     # Get necessary packages
     os.system("pip install -r requirements.txt")
+    
+    import gdown
+    import zipfile
+    from tqdm import tqdm
     
     # Build required directories
     build_directories()

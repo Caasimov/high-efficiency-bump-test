@@ -2,14 +2,12 @@ import os
 import pandas as pd
 import numpy as np
 import json
-from typing import List, Tuple
-import matplotlib
-import matplotlib.pyplot as plt
+from typing import List, Tuple, Union, Optional
 from scipy.signal import medfilt
 from tools import DataFramePlus
-from project_dir import *
+from config import *
 
-def to_seconds(df: pd.DataFrame, col_t: str, sampling_freq=100) -> None:
+def to_seconds(df: pd.DataFrame, col_t: str, sampling_freq: Optional[float]=100) -> None:
     """ Convert a pandas Series to seconds
     
     Parameters
@@ -127,7 +125,7 @@ def extract_from_json(file_type: str) -> list:
 
     return extracted_data
 
-def adjust_and_extend(comb_data, file_type):
+def adjust_and_extend(comb_data: list, file_type: str, offset: Optional[float]=None) -> list:
     """ Adjust and extend the extracted data
     
     Parameters
@@ -142,25 +140,43 @@ def adjust_and_extend(comb_data, file_type):
     list
         List of extracted data
     """
-    comb_data2 = extract_from_json(file_type)
-    for i in range(len(comb_data2)):
-        comb_data2[i][0] = comb_data[i][0] + comb_data[-1][0] + comb_data[-1][2]
-    comb_data.extend(comb_data2)
+    comb_data_new = extract_from_json(file_type)
+    end_time = comb_data[-1][0] + comb_data[-1][2]
+    
+    if offset:
+        end_time += offset
+        
+    for i in range(len(comb_data_new)):
+        comb_data_new[i][0] += end_time
+    comb_data.extend(comb_data_new)
     return comb_data
 
-def time_stamps(file_type: str) -> list:
+def time_stamps(file_type: str, dof: str, offset: Optional[float]=None) -> list:
     """ Extract time stamps from a JSON file
     
     Parameters
     __________
     file_type: str
         Type of JSON file to extract time stamps from
+    dof: str
+        Degree of freedom to extract time stamps for
+    offset: float
+        Offset to add to the time stamps
     
     Returns
     __________
     list
         List of time stamps
     """
+
+    dof_dir = {
+        "x": [1, 0, 0, 0, 0, 0],
+        "y": [0, 1, 0, 0, 0, 0],
+        "z": [0, 0, 1, 0, 0, 0],
+        "phi": [0, 0, 0, 1, 0, 0],
+        "theta": [0, 0, 0, 0, 1, 0],
+        "psi": [0, 0, 0, 0, 0, 1]
+    }
 
     if file_type == 'MULTI-SINE':
         comb_data = extract_from_json(f"{file_type}_1")
@@ -170,12 +186,12 @@ def time_stamps(file_type: str) -> list:
         comb_data = extract_from_json(file_type)
 
     if file_type == 'MULTI-SINE':
-        comb_data = adjust_and_extend(comb_data, f"{file_type}_2")
-        comb_data = adjust_and_extend(comb_data, f"{file_type}_3")
+        comb_data = adjust_and_extend(comb_data, f"{file_type}_2", offset)
+        comb_data = adjust_and_extend(comb_data, f"{file_type}_3", offset)
+        
     elif file_type == 'AGARD-AR-144_B+E':
         comb_data = adjust_and_extend(comb_data, f"{file_type[:-3]}E")
-
-    time_stamps = [[data[1] + data[0], data[2] + data[0] - data[1]] for data in comb_data]
+    time_stamps = [[data[1] + data[0], data[2] + data[0] - data[1]] for data in comb_data if data[6] == dof_dir[dof]]
     return time_stamps
 
 def no_fade(df: pd.DataFrame, time_ints: list) -> pd.DataFrame:
@@ -200,7 +216,7 @@ def no_fade(df: pd.DataFrame, time_ints: list) -> pd.DataFrame:
     
     return df[mask]
 
-def zero_crossings(df: DataFramePlus, col: str) -> tuple:
+def zero_crossings(df: DataFramePlus, col: str) -> Tuple[list, list]:
     """ Find the zero crossings of a column
     
     Parameters
@@ -226,7 +242,7 @@ def zero_crossings(df: DataFramePlus, col: str) -> tuple:
     
     return crossings_idx, crossings_t
 
-def wavelength(df: DataFramePlus, l_bound:int, idx_zeros: list, time_stamps: List[tuple], phase_threshold: float, col='acc_cmd') -> Tuple[int, bool]:
+def wavelength(df: DataFramePlus, l_bound: int, idx_zeros: list, time_stamps: List[tuple], phase_threshold: float, col='acc_cmd') -> Tuple[int, bool]:
     """ Determine if the column on a given interval is a wavelength
     
     Parameters
@@ -261,108 +277,25 @@ def wavelength(df: DataFramePlus, l_bound:int, idx_zeros: list, time_stamps: Lis
             
     return l_bound, False
 
-def save(fig: matplotlib.figure.Figure, fig_type: str, fname: str) -> None:
-    """ Save the figure
-    
-    Parameters
-    __________
-    fig: matplotlib.figure.Figure
-        Figure to save
-    fig_type: str
-        Type of figure to save
-    fname: str
-        File name to save the figure
-    
-    Returns
-    __________
-    None
-    """
-    fpath = f"{paths_plots[fig_type]}{fname}.png"
-    if not fname:
-        fname = input("Enter file name: ")
-    if os.path.exists(fpath):
-            check = input("File already exists. Overwrite? [y/n]: ")
-            if check.lower() == 'n':
-                return
-        
-    fig.savefig(fpath)
-    
-
-def plot_signal(df: pd.DataFrame, type='acceleration', save_check=False, fname=None) -> None:
-    """ Plot the full signal
+def wl_multi_sine(df: DataFramePlus, time_stamps: List[tuple]) -> pd.Series:
+    """ Generate mask with True for the time stamps, False otherwise
     
     Parameters
     __________
     df: pd.DataFrame
-        DataFrame to plot
-    type: str
-        Type of data to plot
-    save_check: bool
-        Flag to save the plot
-    fname: str
-        File name to save the plot
+        DataFrame to process
+    time_stamps: List[tuple]
+        List of time stamps for pure signal
     
     Returns
     __________
-    None
+    pd.Series
+        Mask with True for the time stamps, False otherwise
     """
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    ax.plot(df['t'], df[f'{type[:3]}_mes'], label=f'Measured {type.capitalize()}', color='red')
-    ax.plot(df['t'], df[f'{type[:3]}_cmd'], label=f'Commanded {type.capitalize()}', color='blue')
-    ax.xlabel('Time [s]')
-    ax.ylabel(f'{type.capitalize()} [$m/s^2$]')
+    mask = pd.Series(False, index = df.index)
     
-    ax.legend()
-    ax.grid(True)
+    for start, end in time_stamps:
+        mask |= (df['t'] >= start) & (df['t'] <= end)
     
-    if not save_check:
-        plt.show()
-    else:
-        save(fig, "signal", fname)
+    return mask
 
-def plot_IO(x_b: list, y_b: list, x_t: list, y_t: list, trend=True, save_check=True, fname=None) -> None:
-    """ Plot the input-output data
-    
-    Parameters
-    __________
-    x_b: list
-        List of input data for the bottom sine
-    y_b: list
-        List of output data for the bottom sine
-    x_t: list
-        List of input data for the top sine
-    y_t: list
-        List of output data for the top sine
-    trend: bool
-        Flag to plot the trendline
-    save: bool
-        Flag to save the plot
-    fname: str
-        File name to save the plot
-    
-    Returns
-    __________
-    None
-    """
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    ax.scatter(x_t, y_t, color='blue', label='Positive Acceleration', marker='x')
-    ax.scatter(x_b, y_b, color='red', label='Negative Acceleration', marker='x')
-    ax.xlabel('Input Amplitude')
-    ax.ylabel('Bump Magnitude')
-    
-    if trend:
-        # Add dashed trendline
-        z_t = np.polyfit(x_t, y_t, 1)
-        p_t = np.poly1d(z_t)
-        z_b = np.polyfit(x_b, y_b, 1)
-        p_b = np.poly1d(z_b)
-
-        ax.plot(x_t, p_t(x_t), 'b--')
-        ax.plot(x_b, p_b(x_b), 'r--')
-        
-    ax.legend()
-    ax.grid(True)
-    if not save_check:
-        plt.show()
-    else:
-        save(fig, "I/O", fname)

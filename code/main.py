@@ -3,16 +3,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import functions as fn
-from typing import List
+from typing import List, Optional, Tuple, Union
 
+import tools
 from tools import DataFramePlus
+from config import *
 
-
-
-### DEFAULTS ###
-pd.options.mode.chained_assignment = None
-
-def preprocess(TARGET: str, DOF: str, overwrite: bool, prune=True) -> List[DataFramePlus]:
+def preprocess(TARGET: str, DOF: str, overwrite: bool, prune: Optional[bool]=True) -> List[DataFramePlus]:
     """ Preprocess data for analysis
     
     Parameters
@@ -49,7 +46,7 @@ def preprocess(TARGET: str, DOF: str, overwrite: bool, prune=True) -> List[DataF
         df.smart_save(f"data/processed/{TARGET}__{DOF}.csv")
     return df
 
-def bump_analysis(df: DataFramePlus, tol: float, sep=True, cutoff=0.06) -> List[list]:
+def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=35) -> Tuple[list, list]:
     """ Obtain bump magnitudes and corresponding input amplitudes
     
     Parameters
@@ -58,19 +55,16 @@ def bump_analysis(df: DataFramePlus, tol: float, sep=True, cutoff=0.06) -> List[
         DataFrame containing the data
     tol: float
         Time tolerance for bump consideration
-    sep: bool
-        Separate bumps into bottom/top of sine wave
     cutoff: float
         Cutoff value for bump magnitude
     
     Returns
     __________
-    List[list]
+    Tuple[list, list]
         List of bump magnitudes and corresponding input amplitudes
     """
     top_sine = []
     bottom_sine = []
-    data = []
     
     idx_0, t_0 = fn.zero_crossings(df, 'vel_cmd')
     df['diff'] = df['acc_mes'] - df['acc_cmd']
@@ -79,33 +73,43 @@ def bump_analysis(df: DataFramePlus, tol: float, sep=True, cutoff=0.06) -> List[
         interval = df[(df['t'] >= (t - tol)) & (df['t'] <= (t + tol))]
         bump_max = interval['diff'].max()
         bump_min = interval['diff'].min()
-        if (bump_max - bump_min < cutoff) and (abs(df.loc[idx, 'acc_cmd']) > 1e-3):
-            if sep:
-                if df.loc[idx, 'acc_cmd'] < 0:
-                    bottom_sine.append([bump_max - bump_min, abs(df.loc[idx, 'acc_cmd'])])
-                else:
-                    top_sine.append([bump_max - bump_min, df.loc[idx, 'acc_cmd']])
+        if (((bump_max - bump_min)/abs(df.loc[idx, 'acc_cmd']))*100 < cutoff) and (abs(df.loc[idx, 'acc_cmd']) > 1e-3):
+            if df.loc[idx, 'acc_cmd'] < 0:
+                bottom_sine.append([bump_max - bump_min, abs(df.loc[idx, 'acc_cmd'])])
             else:
-                data.append([bump_max - bump_min, df.loc[idx, 'acc_cmd']])
-    if sep:
-        return top_sine, bottom_sine
-    else:
-        return data
-        
+                top_sine.append([bump_max - bump_min, df.loc[idx, 'acc_cmd']])
+
+    return top_sine, bottom_sine
 
 if __name__ == '__main__':
+    ### DEFAULTS ###
+    pd.options.mode.chained_assignment = None
     
-    TARGET = 'BUMP'
+    #~! INPUTS !~#
+    TARGET = 'MULTI-SINE'
     DOF = 'z'
+    
+    sep = False
+    
+    if DOF == 'z':
+        sep = True
     
     top_bumps, bottom_bumps = [], []
     df_main = preprocess(TARGET, DOF, overwrite=False, prune=False)
     idx_zeros, time_zeros = fn.zero_crossings(df_main, 'acc_cmd')
-
-    if TARGET not in ('MULTI-SINE', 'BUMP'):
-        time_stamps = fn.time_stamps(TARGET)
-        wls = df_main.fragment(fn.wavelength, idx_zeros, time_stamps, phase_threshold=10.0)
+    
+    tools.plot_signal(df_main, type='acceleration', save_check=True, fname=f"{TARGET}_{DOF}.png")
+    
+    if TARGET != 'BUMP':
+        if TARGET == 'MULTI-SINE':
+            time_stamps = fn.time_stamps(TARGET, DOF, 22.5)
+            wls = df_main.fragment_by_mask(fn.wl_multi_sine, time_stamps)
+        else:
+            time_stamps = fn.time_stamps(TARGET, DOF)
+            wls = df_main.fragment_by_iteration(fn.wavelength, idx_zeros, time_stamps, phase_threshold=10.0)
+            
         for wl in wls:
+            tools.plot_signal(wl, type='acceleration', save_check=False)
             top, bottom = bump_analysis(wl, 0.2)
             top_bumps.extend(top)
             bottom_bumps.extend(bottom)
@@ -117,20 +121,8 @@ if __name__ == '__main__':
     x_b = [item[1] for item in bottom_bumps]
     y_b = [item[0] for item in bottom_bumps]
     
+    if not sep:
+        x = x_t + x_b
+        y = y_t + y_b
     
-    plt.scatter(x_t, y_t, color='blue', label='Positive Acceleration', marker='x')
-    plt.scatter(x_b, y_b, color='red', label='Negative Acceleration', marker='x')
-    plt.xlabel('Input Amplitude')
-    plt.ylabel('Bump Magnitude')
-
-    # Add dashed trendline
-    z_t = np.polyfit(x_t, y_t, 1)
-    p_t = np.poly1d(z_t)
-    z_b = np.polyfit(x_b, y_b, 1)
-    p_b = np.poly1d(z_b)
-
-    plt.plot(x_t, p_t(x_t), 'b--')
-    plt.plot(x_b, p_b(x_b), 'r--')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    tools.plot_IO(x_b, y_b, x_t, y_t, trend=True, save_check=True, fname=f"{TARGET}_{DOF}.png")

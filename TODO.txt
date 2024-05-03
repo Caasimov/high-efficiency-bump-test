@@ -1,21 +1,7 @@
-1. Multi-sine:
-    a) Check whether the zero-crossing method can be made to work (extend interval to include whole thing maybe??)
-    b) Fourier analysis for de Bode plots.
+1. FFT -> isolate reversal bump harmonics -> sum X_i's & get magnitude -> get reference amplitude -> match per wavelength & plot in bump amplitude vs input amplitude plot
 
-2. Investigate growing frequency/phase disparity at high f_0 for AGARD files.
-
-3. Implement de Bode diagram with revised wavelength function:
+2. Implement de Bode diagram with revised wavelength function:
     a) Should have fewer issues with finding a suitable wavelength so try direct lift from main branch.
     b) If that fails, rewrite &/ troubleshoot with René.
 
-4. Investigate a method for saving fragment locations to reduce runtime.
-
-5. Plotting:
-    a) Add new directories to project_dir.py for various plots.
-    b) Add either universal plot function or brute-force (lazy).
-    c) Agree on std format for plots -> churn out results.
-
-6. Trendline for z-pos, z-neg and x for AGARD test to determine where the slope differences come from &/ effect of gravity
-
-7. Get R^2 for all trendlines.
-
+3. Get R^2 for all trendlines.
