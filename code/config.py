@@ -4,7 +4,8 @@ c1 = 'blue'
 c2 = 'red'
 marker = 'x'
 linestyle1 = '--'
-figsize = (8, 5)
+figsize_default = (8, 5)
+figsize_deBode = (12, 8)
 
 ### FILEPATHS ###
 

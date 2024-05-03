@@ -86,8 +86,14 @@ def build_directories() -> None:
     if not os.path.exists("plots/signals"):
         os.mkdir("plots/signals")
         folders_created += 1
+    if not os.path.exists("plots/deBode"):
+        os.mkdir("plots/deBode")
+        folders_created += 1
+    if not os.path.exists("plots/spectra"):
+        os.mkdir("plots/spectra")
+        folders_created += 1
     
-    print(f"{folders_created} directories created.")
+    print(f"\n{folders_created} directories created.\n")
 
 if __name__ == "__main__":
     # HDF5 data
@@ -99,7 +105,10 @@ if __name__ == "__main__":
     output_json = "data/raw/json.zip"
     
     # Get necessary packages
-    os.system("pip install -r requirements.txt")
+    try:
+        os.system("pip install -r requirements.txt")
+    except Exception as e:
+        print(f"Failed to install required packages: {e}")
 
     # Build required directories
     build_directories()
@@ -108,10 +117,10 @@ if __name__ == "__main__":
     if len(os.listdir("data/raw/hdf5")) == 0:
         get_data(url_hdf5, output_hdf5, 'hdf5')
     else:
-        print("HDF5 data already downloaded.")
+        print("HDF5 data already downloaded or 'hdf5' folder occupied.")
         
     if len(os.listdir("data/raw/json")) == 0:
         get_data(url_json, output_json, 'json')
     else:
-        print("JSON data already downloaded.")
+        print("JSON data already downloaded or 'json' folder occupied.")
     

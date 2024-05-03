@@ -1,12 +1,13 @@
+from __future__ import annotations
 import os
 import pandas as pd
 import numpy as np
 from scipy.fftpack import fft, fftfreq
+from scipy.signal import find_peaks
 import matplotlib
 import matplotlib.pyplot as plt
 import h5py
 from typing import Callable, List, Tuple, Any, Union, Optional
-from __future__ import annotations
 from tqdm import tqdm
 from config import *
 
@@ -115,7 +116,7 @@ class DataFramePlus(pd.DataFrame):
             while u_bound <= MAX:
                 l_bound, flag = func(self[l_bound:u_bound], l_bound, *args, **kwargs)
                 if flag:
-                    fragments.append(self[l_bound:u_bound])
+                    fragments.append(DataFramePlus(self[l_bound:u_bound]))
                     l_bound = u_bound
                 u_bound += 1
                 pbar.update(l_bound - prev_l_bound)
@@ -140,7 +141,7 @@ class DataFramePlus(pd.DataFrame):
         fragments = []        
 
         for _, group in self[mask].groupby((~mask).cumsum()):
-            fragments.append(group)
+            fragments.append(DataFramePlus(group))
 
         print(f"Fragmentation complete. {len(fragments)} fragments found.")
         return fragments
@@ -196,12 +197,13 @@ class DataFramePlus(pd.DataFrame):
         
         Returns
         __________
-        
+        DataFramePlus
+            DataFrame containing the FFT results
         """
         if isinstance(col, str):
             col = [col]
             
-        N = len(self.shape[1])
+        N = self.shape[0]
         T = 1.0 / sampling_rate
         X_f = fftfreq(N, T)[:N//2]
         
@@ -298,7 +300,7 @@ def plot_signal(df: pd.DataFrame, type: Optional[str]='acceleration', save_check
     __________
     None
     """
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(1, 1, figsize=figsize_default)
     ax.plot(df['t'], df[f'{type[:3]}_mes'], label=f'Measured {type.capitalize()}', color=c2)
     ax.plot(df['t'], df[f'{type[:3]}_cmd'], label=f'Commanded {type.capitalize()}', color=c1)
     ax.set_xlabel('Time [s]')
@@ -336,7 +338,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     __________
     None
     """
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(1, 1, figsize=figsize_default)
     if x_t is not None or y_t is not None:
         ax.scatter(x_t, y_t, color=c1, label='Positive Acceleration', marker=marker)
         ax.scatter(x_b, y_b, color=c2, label='Negative Acceleration', marker=marker)
@@ -368,3 +370,88 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         plt.show()
     else:
         save(fig, "I/O", fname)
+
+def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[float]=0.2, save_check: Optional[bool]=True, fname: Optional[str]=None) -> None:
+    """ Plot the deBode diagram for a given signal seperated into its consituent wavelengths (post FFT)
+    
+    Parameters
+    __________
+    df_list: List[pd.DataFrame]
+        List of DataFrames containing the FFT results
+    cols: List[str]
+        cols[0] = X_f, cols[1] = Y_f
+    height: float
+        Height threshold for the peaks
+    save_check: bool
+        Flag to save the plot
+    fname: str
+        File name to save the plot
+    
+    Returns
+    __________
+    None
+    """
+    
+    magnitudes = []
+    phases = []
+    freqs = []
+    
+    # Data pre-processing
+    for wl in df_list:
+        fft_mag = np.abs(wl[cols[0]])
+        peaks, _ = find_peaks(fft_mag, height=height)
+        
+        # Calculate transfer function
+        H_s = wl[cols[1]][peaks] / wl[cols[0]][peaks]
+        mag_temp = []
+        phases_temp = []
+        
+        # Decompose transfer function
+        for h in H_s:
+            mag_temp.append(20*np.log10(np.abs(h)))
+            phases_temp.append(np.angle(h, deg=True))
+            
+        magnitudes.extend(mag_temp)
+        phases.extend(phases_temp)
+        freqs.extend(wl['f'][peaks])
+    
+    # Plotting
+    fig, ax = plt.subplots(2, 1, figsize=figsize_deBode)
+    ax[0].scatter(freqs, magnitudes, color=c1, marker=marker)
+    ax[0].set_xlabel('Frequency [Hz]')
+    ax[0].set_ylabel('Magnitude [dB]')
+    ax[0].set_xscale('log')
+    ax[0].grid(True)
+    
+    ax[1].scatter(freqs, phases, color=c1, marker=marker)
+    ax[1].set_xlabel('Frequency [Hz]')
+    ax[1].set_ylabel('Phase [deg]')
+    ax[1].set_xscale('log')
+    ax[1].grid(True)
+    
+    plt.tight_layout()
+    
+    if not save_check:
+        plt.show()
+    else:
+        save(fig, "deBode", fname)
+
+def plot_spectrum(df_list: List[pd.DataFrame], cols: List[str], save_check: Optional[bool]=True, fname: Optional[str]=None) -> None:
+    """ Plot the spectrum of a given signal seperated into its consituent wavelengths (post FFT)
+    
+    Parameters
+    __________
+    df_list: List[pd.DataFrame]
+        List of DataFrames containing the FFT results
+    cols: List[str]
+        cols[0] = X_f, cols[1] = Y_f
+    save_check: bool
+        Flag to save the plot
+    fname: str
+        File name to save the plot
+        
+    Returns
+    __________
+    None
+    """
+    pass

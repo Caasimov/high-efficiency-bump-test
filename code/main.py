@@ -81,12 +81,16 @@ def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=35) -> 
 
     return top_sine, bottom_sine
 
+def postprocess():
+    pass
+
 if __name__ == '__main__':
     ### DEFAULTS ###
     pd.options.mode.chained_assignment = None
+    sampling_rate = 100 # Hz
     
     #~! INPUTS !~#
-    TARGET = 'MULTI-SINE'
+    TARGET = 'AGARD-AR-144_A'
     DOF = 'z'
     
     sep = False
@@ -95,6 +99,8 @@ if __name__ == '__main__':
         sep = True
     
     top_bumps, bottom_bumps = [], []
+    dfs_fft = []
+    
     df_main = preprocess(TARGET, DOF, overwrite=False, prune=False)
     idx_zeros, time_zeros = fn.zero_crossings(df_main, 'acc_cmd')
     
@@ -109,10 +115,10 @@ if __name__ == '__main__':
             wls = df_main.fragment_by_iteration(fn.wavelength, idx_zeros, time_stamps, phase_threshold=10.0)
             
         for wl in wls:
-            tools.plot_signal(wl, type='acceleration', save_check=False)
             top, bottom = bump_analysis(wl, 0.2)
             top_bumps.extend(top)
             bottom_bumps.extend(bottom)
+            dfs_fft.append(wl.FFT(['acc_cmd', 'acc_mes'], sampling_rate))
     else:
         top_bumps, bottom_bumps = bump_analysis(df_main, 0.2)
     
@@ -126,3 +132,4 @@ if __name__ == '__main__':
         y = y_t + y_b
     
     tools.plot_IO(x_b, y_b, x_t, y_t, trend=True, save_check=True, fname=f"{TARGET}_{DOF}.png")
+    tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"{TARGET}_{DOF}.png")
