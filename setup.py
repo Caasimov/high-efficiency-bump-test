@@ -1,6 +1,6 @@
 import os
 
-def get_data(url: str, output: str, type: Optional[str]=None) -> None:
+def get_data(url: str, output: str, type: str=None) -> None:
     """ Download data from Google Drive
     
     Parameters
@@ -16,6 +16,11 @@ def get_data(url: str, output: str, type: Optional[str]=None) -> None:
     __________
     None
     """
+    
+    import gdown
+    import zipfile
+    from tqdm import tqdm
+    
     if type is not None and not isinstance(type, str):
         raise ValueError("`type` must be a string")
 
@@ -94,12 +99,7 @@ if __name__ == "__main__":
     
     # Get necessary packages
     os.system("pip install -r requirements.txt")
-    
-    import gdown
-    import zipfile
-    from tqdm import tqdm
-    from typing import Optional
-    
+
     # Build required directories
     build_directories()
     
