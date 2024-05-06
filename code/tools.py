@@ -354,13 +354,19 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
             # Add dashed trendline
             z_t, residuals_t, _, _, _ = np.polyfit(x_t, y_t, 1, full=True)
             p_t = np.poly1d(z_t)
-            z_b, residuals_t, _, _. _ = np.polyfit(x_b, y_b, 1, full=True)
+            z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
             p_b = np.poly1d(z_b)
             
             # Calculate R^2
-            ss_res_t = np.sum(residuals_t)
+            ss_res_t = residuals_t[0]
+            ss_tot_t = np.sum((y_t - np.mean(y_t))**2)
+            r_squared_t = 1 - (ss_res_t / ss_tot_t)
             
-            trend_data.extend([[z_t[1], z_t[0]], [z_b[1], z_b[0]]])
+            ss_res_b = residuals_b[0]
+            ss_tot_b = np.sum((y_b - np.mean(y_b))**2)
+            r_squared_b = 1 - (ss_res_b / ss_tot_b)
+            
+            trend_data.extend([[z_t[1], z_t[0], r_squared_t], [z_b[1], z_b[0], r_squared_b]])
             ax.plot(x_t, p_t(x_t), ls=linestyle1, color=c1)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c2)
             
@@ -370,9 +376,11 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
         
         if trend:
-            z_b = np.polyfit(x_b, y_b, 1)
-            
-            trend_data.extend([z_b[1], z_b[0]])
+            z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
+            ss_res_b = residuals_b[0]
+            ss_tot_b = np.sum((y_b - np.mean(y_b))**2)
+            r_squared_b = 1 - (ss_res_b / ss_tot_b)
+            trend_data.extend([z_b[1], z_b[0], r_squared_b])
             p_b = np.poly1d(z_b)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c1)
         

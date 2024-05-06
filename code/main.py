@@ -81,8 +81,49 @@ def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=35) -> 
 
     return top_sine, bottom_sine
 
-def postprocess():
-    pass
+def postprocess(type: str, trend_sep: List[list], trend_comb: list, save_check: Optional[bool]=True) -> None:
+    """ Add generated data to csv output file
+    
+    Parameters
+    __________
+    type: str
+        Type of data to save
+    trend_sep: List[list]
+        List of trend data for separated bumps (top/bottom)
+    trend_comb: list
+        List of trend data for combined bumps
+    save_check: bool
+        Check if the data should be saved
+    
+    Returns
+    __________
+    None"""
+    df = DataFramePlus()
+    if os.path.exists(f"{path_OUT}/OUTPUT.csv"):
+        df.read_csv(f"{path_OUT}/OUTPUT.csv", index_col=0)
+    else:
+        df = DataFramePlus(columns=['OUT'])
+        df['OUT'] = ['intercept_t', 'slope_t', 'R^2_t', 'intercept_b', 'slope_b', 'R^2_b', 'intercept_c', 'slope_c', 'R^2_c']
+    
+    if type in df.columns and save_check:
+        verif = input(f"{type} column not empty. Overwrite? [y/n]: ")
+        if verif.lower() == 'n':
+            return
+        
+    df[type] = [
+        trend_sep[0][0],
+        trend_sep[0][1],
+        trend_sep[0][2],
+        trend_sep[1][0],
+        trend_sep[1][1],
+        trend_sep[1][2],
+        trend_comb[0],
+        trend_comb[1],
+        trend_comb[2]
+    ]
+    df.to_csv(f"{path_OUT}/OUTPUT.csv")
+    print(f"Data saved to {path_OUT}/OUTPUT.csv")
+         
 
 if __name__ == '__main__':
     ### DEFAULTS ###
@@ -113,7 +154,6 @@ if __name__ == '__main__':
             wls = df_main.fragment_by_iteration(fn.wavelength, idx_zeros, time_stamps, phase_threshold=10.0)
             
         for wl in wls:
-            tools.plot_signal(wl, type='acceleration', save_check=False)
             top, bottom = bump_analysis(wl, 0.2)
             top_bumps.extend(top)
             bottom_bumps.extend(bottom)
@@ -133,4 +173,5 @@ if __name__ == '__main__':
     trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, trend=True, save_check=True, fname=f"{TARGET}_{DOF}_sep.png")
     trend_comb = tools.plot_IO(x, y, trend=True, save_check=True, fname=f"{TARGET}_{DOF}_comb.png")
     tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"{TARGET}_{DOF}.png", cutoff=1)
-    print(trend_sep, trend_comb)
+    
+    postprocess(TARGET, trend_sep, trend_comb, save_check=True)

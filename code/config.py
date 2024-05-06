@@ -60,3 +60,5 @@ paths_plots = {
     "deBode": "plots/deBode",
     "spectrum": "plots/spectra"
     }
+
+path_OUT = "data"
