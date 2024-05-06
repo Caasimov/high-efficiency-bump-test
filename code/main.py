@@ -90,10 +90,8 @@ if __name__ == '__main__':
     sampling_rate = 100 # Hz
     
     #~! INPUTS !~#
-    TARGET = 'AGARD-AR-144_A'
+    TARGET = 'MULTI-SINE'
     DOF = 'z'
-    
-    sep = False
     
     if DOF == 'z':
         sep = True
@@ -108,7 +106,7 @@ if __name__ == '__main__':
     
     if TARGET != 'BUMP':
         if TARGET == 'MULTI-SINE':
-            time_stamps = fn.time_stamps(TARGET, DOF, 22.5)
+            time_stamps = fn.time_stamps(TARGET, DOF, [24.58, 19.05])
             wls = df_main.fragment_by_mask(fn.wl_multi_sine, time_stamps)
         else:
             time_stamps = fn.time_stamps(TARGET, DOF)
@@ -128,9 +126,11 @@ if __name__ == '__main__':
     x_b = [item[1] for item in bottom_bumps]
     y_b = [item[0] for item in bottom_bumps]
     
-    if not sep:
-        x = x_t + x_b
-        y = y_t + y_b
+
+    x = x_t + x_b
+    y = y_t + y_b
     
-    tools.plot_IO(x_b, y_b, x_t, y_t, trend=True, save_check=True, fname=f"{TARGET}_{DOF}.png")
+    trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, trend=True, save_check=True, fname=f"{TARGET}_{DOF}_sep.png")
+    trend_comb = tools.plot_IO(x, y, trend=True, save_check=True, fname=f"{TARGET}_{DOF}_comb.png")
     tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"{TARGET}_{DOF}.png", cutoff=1)
+    print(trend_sep, trend_comb)

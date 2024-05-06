@@ -316,7 +316,7 @@ def plot_signal(df: pd.DataFrame, type: Optional[str]='acceleration', save_check
     else:
         save(fig, "signal", fname)
 
-def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional[List[float]]=None, trend: Optional[bool]=True, save_check: Optional[bool]=True, fname: Optional[str]=None) -> None:
+def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional[List[float]]=None, trend: Optional[bool]=True, save_check: Optional[bool]=True, fname: Optional[str]=None) -> list:
     """ Plot the input-output data
     
     Parameters
@@ -340,6 +340,9 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     __________
     None
     """
+    
+    trend_data = []
+    
     fig, ax = plt.subplots(1, 1, figsize=figsize_default)
     if x_t is not None or y_t is not None:
         ax.scatter(x_t, y_t, color=c1, label='Positive Acceleration', marker=marker)
@@ -349,13 +352,18 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     
         if trend:
             # Add dashed trendline
-            z_t = np.polyfit(x_t, y_t, 1)
+            z_t, residuals_t, _, _, _ = np.polyfit(x_t, y_t, 1, full=True)
             p_t = np.poly1d(z_t)
-            z_b = np.polyfit(x_b, y_b, 1)
+            z_b, residuals_t, _, _. _ = np.polyfit(x_b, y_b, 1, full=True)
             p_b = np.poly1d(z_b)
-
+            
+            # Calculate R^2
+            ss_res_t = np.sum(residuals_t)
+            
+            trend_data.extend([[z_t[1], z_t[0]], [z_b[1], z_b[0]]])
             ax.plot(x_t, p_t(x_t), ls=linestyle1, color=c1)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c2)
+            
     else:
         ax.scatter(x_b, y_b, color=c1, label='Acceleration', marker=marker)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
@@ -363,6 +371,8 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         
         if trend:
             z_b = np.polyfit(x_b, y_b, 1)
+            
+            trend_data.extend([z_b[1], z_b[0]])
             p_b = np.poly1d(z_b)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c1)
         
@@ -372,6 +382,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         plt.show()
     else:
         save(fig, "I/O", fname)
+        return trend_data
 
 def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[float]=0.2, save_check: Optional[bool]=True, fname: Optional[str]=None, cutoff: Optional[float]=float('inf')) -> None:
     """ Plot the deBode diagram for a given signal seperated into its consituent wavelengths (post FFT)
@@ -407,16 +418,17 @@ def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[f
         H_s = wl[cols[1]][peaks] / wl[cols[0]][peaks]
         mag_temp = []
         phases_temp = []
-        
+        freq_temp = []
         # Decompose transfer function
-        for h in H_s:
+        for i, h in enumerate(H_s):
             if np.abs(h) < cutoff:
                 mag_temp.append(20*np.log10(np.abs(h)))
                 phases_temp.append(np.angle(h, deg=True))
+                freq_temp.append(wl['f'][peaks[i]])
             
         magnitudes.extend(mag_temp)
         phases.extend(phases_temp)
-        freqs.extend(wl['f'][peaks])
+        freqs.extend(freq_temp)
     
     # Plotting
     fig, ax = plt.subplots(2, 1, figsize=figsize_deBode)

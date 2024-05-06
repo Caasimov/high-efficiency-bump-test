@@ -125,7 +125,7 @@ def extract_from_json(file_type: str) -> list:
 
     return extracted_data
 
-def adjust_and_extend(comb_data: list, file_type: str, offset: Optional[float]=None) -> list:
+def adjust_and_extend(comb_data: list, file_type: str, offset: Optional[List[float]]=None) -> list:
     """ Adjust and extend the extracted data
     
     Parameters
@@ -151,7 +151,7 @@ def adjust_and_extend(comb_data: list, file_type: str, offset: Optional[float]=N
     comb_data.extend(comb_data_new)
     return comb_data
 
-def time_stamps(file_type: str, dof: str, offset: Optional[float]=None) -> list:
+def time_stamps(file_type: str, dof: str, offset: Optional[List[float]]=None) -> list:
     """ Extract time stamps from a JSON file
     
     Parameters
@@ -186,8 +186,8 @@ def time_stamps(file_type: str, dof: str, offset: Optional[float]=None) -> list:
         comb_data = extract_from_json(file_type)
 
     if file_type == 'MULTI-SINE':
-        comb_data = adjust_and_extend(comb_data, f"{file_type}_2", offset)
-        comb_data = adjust_and_extend(comb_data, f"{file_type}_3", offset)
+        comb_data = adjust_and_extend(comb_data, f"{file_type}_2", offset[0])
+        comb_data = adjust_and_extend(comb_data, f"{file_type}_3", offset[1])
         
     elif file_type == 'AGARD-AR-144_B+E':
         comb_data = adjust_and_extend(comb_data, f"{file_type[:-3]}E")
