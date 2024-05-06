@@ -46,8 +46,8 @@ paths_hdf5_mes = {
 paths_json = {
     "AGARD-AR-144_A": "data/raw/json/srs-agard144a.json",
     "AGARD-AR-144_B": "data/raw/json/srs-agard144b.json",
-    "AGARD-AR-144_D": "data/raw/json/json/srs-agard144d.json",
-    "AGARD-AR-144_E": "data/raw/json/json/srs-agard144e.json",
+    "AGARD-AR-144_D": "data/raw/json/srs-agard144d.json",
+    "AGARD-AR-144_E": "data/raw/json/srs-agard144e.json",
     "BUMP": "data/raw/json/srs-test-motion-bump.json",
     "BUMP+": "data/raw/json/srs-test-motion-bump-loc.json",
     "MULTI-SINE_1": "data/raw/json/srs-test-motion-sines1.json",

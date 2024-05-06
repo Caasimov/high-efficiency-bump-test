@@ -211,13 +211,13 @@ class DataFramePlus(pd.DataFrame):
         output.update({key: None for key in col}) 
         
         for c in col:
-            Y_f = fft(self[c]).to_numpy()
+            Y_f = fft(np.array(self[c]))
             output[c] = Y_f[0:N//2]
         
         return DataFramePlus(output)
                   
             
-    def _lag(self, col1: str, col2: str) -> None:
+    def _lag(self, col1: str, col2: str) -> int:
         """ Calculate the lag between two columns
         
         Parameters
@@ -229,7 +229,8 @@ class DataFramePlus(pd.DataFrame):
         
         Returns
         __________
-        None
+        int
+            Lag index
         """
         cross_corr = np.correlate(self[col1], self[col2], mode='full')
         
@@ -237,7 +238,7 @@ class DataFramePlus(pd.DataFrame):
         
         return lag_idx
         
-    def _offset(self, col1: str, col2: str) -> None:
+    def _offset(self, col1: str, col2: str) -> float:
         """ Calculate the offset in mean between two columns
         
         Parameters
@@ -249,7 +250,8 @@ class DataFramePlus(pd.DataFrame):
         
         Returns
         __________
-        None
+        float
+            Offset value
         """
         return np.mean(self[col1]) - np.mean(self[col2])
 
@@ -371,7 +373,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     else:
         save(fig, "I/O", fname)
 
-def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[float]=0.2, save_check: Optional[bool]=True, fname: Optional[str]=None) -> None:
+def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[float]=0.2, save_check: Optional[bool]=True, fname: Optional[str]=None, cutoff: Optional[float]=float('inf')) -> None:
     """ Plot the deBode diagram for a given signal seperated into its consituent wavelengths (post FFT)
     
     Parameters
@@ -408,8 +410,9 @@ def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[f
         
         # Decompose transfer function
         for h in H_s:
-            mag_temp.append(20*np.log10(np.abs(h)))
-            phases_temp.append(np.angle(h, deg=True))
+            if np.abs(h) < cutoff:
+                mag_temp.append(20*np.log10(np.abs(h)))
+                phases_temp.append(np.angle(h, deg=True))
             
         magnitudes.extend(mag_temp)
         phases.extend(phases_temp)

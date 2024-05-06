@@ -38,7 +38,7 @@ def preprocess(TARGET: str, DOF: str, overwrite: bool, prune: Optional[bool]=Tru
         df.dydx('t', 'pos_mes', 'vel_mes')
         df.dydx('t', 'vel_mes', 'acc_mes')
         df['pos_mes'] += df._offset('pos_cmd', 'pos_mes')
-        df.align(['pos_mes', 'vel_mes', 'acc_mes'], df._lag('acc_cmd', 'acc_mes'))
+        df.align(['pos_mes', 'vel_mes', 'acc_mes'], df._lag('acc_cmd', 'acc_mes')-1)
         fn.filter(df, 'acc_mes', 3)
         if prune:
             time_stamps = fn.time_stamps(TARGET)
@@ -115,6 +115,7 @@ if __name__ == '__main__':
             wls = df_main.fragment_by_iteration(fn.wavelength, idx_zeros, time_stamps, phase_threshold=10.0)
             
         for wl in wls:
+            tools.plot_signal(wl, type='acceleration', save_check=False)
             top, bottom = bump_analysis(wl, 0.2)
             top_bumps.extend(top)
             bottom_bumps.extend(bottom)
@@ -132,4 +133,4 @@ if __name__ == '__main__':
         y = y_t + y_b
     
     tools.plot_IO(x_b, y_b, x_t, y_t, trend=True, save_check=True, fname=f"{TARGET}_{DOF}.png")
-    tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"{TARGET}_{DOF}.png")
+    tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"{TARGET}_{DOF}.png", cutoff=1)
