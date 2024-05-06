@@ -345,8 +345,8 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     
     fig, ax = plt.subplots(1, 1, figsize=figsize_default)
     if x_t is not None or y_t is not None:
-        ax.scatter(x_t, y_t, color=c1, label='Positive Acceleration', marker=marker)
-        ax.scatter(x_b, y_b, color=c2, label='Negative Acceleration', marker=marker)
+        ax.scatter(x_t, y_t, color=c1, label='Positive Acceleration', marker=marker1)
+        ax.scatter(x_b, y_b, color=c2, label='Negative Acceleration', marker=marker2)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
     
@@ -371,7 +371,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c2)
             
     else:
-        ax.scatter(x_b, y_b, color=c1, label='Acceleration', marker=marker)
+        ax.scatter(x_b, y_b, color=c1, label='Acceleration', marker=marker1)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
         
@@ -440,13 +440,13 @@ def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[f
     
     # Plotting
     fig, ax = plt.subplots(2, 1, figsize=figsize_deBode)
-    ax[0].scatter(freqs, magnitudes, color=c1, marker=marker)
+    ax[0].scatter(freqs, magnitudes, color=c1, marker=marker1)
     ax[0].set_xlabel('Frequency [Hz]')
     ax[0].set_ylabel('Magnitude [dB]')
     ax[0].set_xscale('log')
     ax[0].grid(True)
     
-    ax[1].scatter(freqs, phases, color=c1, marker=marker)
+    ax[1].scatter(freqs, phases, color=c1, marker=marker1)
     ax[1].set_xlabel('Frequency [Hz]')
     ax[1].set_ylabel('Phase [deg]')
     ax[1].set_xscale('log')

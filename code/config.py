@@ -2,7 +2,8 @@
 
 c1 = 'blue'
 c2 = 'red'
-marker = 'x'
+marker1 = 'x'
+marker2 = '^'
 linestyle1 = '--'
 figsize_default = (8, 5)
 figsize_deBode = (12, 8)
