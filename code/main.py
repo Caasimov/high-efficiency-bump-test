@@ -131,7 +131,7 @@ if __name__ == '__main__':
     sampling_rate = 100 # Hz
     
     #~! INPUTS !~#
-    TARGET = 'MULTI-SINE'
+    TARGET = 'BUMP'
     DOF = 'z'
     
     if DOF == 'z':
@@ -160,6 +160,7 @@ if __name__ == '__main__':
             dfs_fft.append(wl.FFT(['acc_cmd', 'acc_mes'], sampling_rate))
     else:
         top_bumps, bottom_bumps = bump_analysis(df_main, 0.2)
+        #print(top_bumps, bottom_bumps)
     
     x_t = [item[1] for item in top_bumps]
     y_t = [item[0] for item in top_bumps]
