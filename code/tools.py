@@ -357,6 +357,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
             z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
             p_b = np.poly1d(z_b)
             
+            
             # Calculate R^2
             ss_res_t = residuals_t[0]
             ss_tot_t = np.sum((y_t - np.mean(y_t))**2)

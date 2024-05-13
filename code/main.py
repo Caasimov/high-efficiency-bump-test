@@ -38,7 +38,7 @@ def preprocess(TARGET: str, DOF: str, overwrite: bool, prune: Optional[bool]=Tru
         df.dydx('t', 'pos_mes', 'vel_mes')
         df.dydx('t', 'vel_mes', 'acc_mes')
         df['pos_mes'] += df._offset('pos_cmd', 'pos_mes')
-        df.align(['pos_mes', 'vel_mes', 'acc_mes'], df._lag('acc_cmd', 'acc_mes')-1)
+        df.align(['pos_mes', 'vel_mes', 'acc_mes'], df._lag('acc_cmd', 'acc_mes'))
         fn.filter(df, 'acc_mes', 3)
         if prune:
             time_stamps = fn.time_stamps(TARGET)
@@ -73,7 +73,7 @@ def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=35) -> 
         interval = df[(df['t'] >= (t - tol)) & (df['t'] <= (t + tol))]
         bump_max = interval['diff'].max()
         bump_min = interval['diff'].min()
-        if (((bump_max - bump_min)/abs(df.loc[idx, 'acc_cmd']))*100 < cutoff) and (abs(df.loc[idx, 'acc_cmd']) > 1e-3):
+        if (((bump_max - bump_min)/abs(df.loc[idx, 'acc_cmd']))*100 <= cutoff) and abs(df.loc[idx, 'acc_cmd']) < .5:
             if df.loc[idx, 'acc_cmd'] < 0:
                 bottom_sine.append([bump_max - bump_min, abs(df.loc[idx, 'acc_cmd'])])
             else:
@@ -159,8 +159,8 @@ if __name__ == '__main__':
             bottom_bumps.extend(bottom)
             dfs_fft.append(wl.FFT(['acc_cmd', 'acc_mes'], sampling_rate))
     else:
-        top_bumps, bottom_bumps = bump_analysis(df_main, 0.2)
-        #print(top_bumps, bottom_bumps)
+        top_bumps, bottom_bumps = bump_analysis(df_main, 0.2, cutoff=100)
+        print(top_bumps, bottom_bumps)
     
     x_t = [item[1] for item in top_bumps]
     y_t = [item[0] for item in top_bumps]
