@@ -242,6 +242,42 @@ def zero_crossings(df: DataFramePlus, col: str) -> Tuple[list, list]:
     
     return crossings_idx, crossings_t
 
+def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=25) -> Tuple[list, list]:
+    """ Obtain bump magnitudes and corresponding input amplitudes
+    
+    Parameters
+    __________
+    df: DataFramePlus
+        DataFrame containing the data
+    tol: float
+        Time tolerance for bump consideration
+    cutoff: float
+        Cutoff value for bump magnitude
+    
+    Returns
+    __________
+    Tuple[list, list]
+        List of bump magnitudes and corresponding input amplitudes
+    """
+    top_sine = []
+    bottom_sine = []
+    
+    idx_0, t_0 = zero_crossings(df, 'vel_cmd')
+    df['diff'] = df['acc_mes'] - df['acc_cmd']
+    
+    for idx, t in zip(idx_0, t_0):
+        interval = df[(df['t'] >= (t - tol)) & (df['t'] <= (t + tol))]
+        bump_max = interval['diff'].max()
+        bump_min = interval['diff'].min()
+        if (((bump_max - bump_min)/abs(df.loc[idx, 'acc_cmd']))*100 <= cutoff) and abs(df.loc[idx, 'acc_cmd']) < .5:
+            if df.loc[idx, 'acc_cmd'] < 0:
+                bottom_sine.append([bump_max - bump_min, abs(df.loc[idx, 'acc_cmd'])])
+            else:
+                top_sine.append([bump_max - bump_min, df.loc[idx, 'acc_cmd']])
+
+    return top_sine, bottom_sine
+
+
 def wavelength(df: DataFramePlus, l_bound: int, idx_zeros: list, time_stamps: List[tuple], phase_threshold: float, col='acc_cmd') -> Tuple[int, bool]:
     """ Determine if the column on a given interval is a wavelength
     
@@ -299,3 +335,38 @@ def wl_multi_sine(df: DataFramePlus, time_stamps: List[tuple]) -> pd.Series:
     
     return mask
 
+def bump_plus(df: DataFramePlus, spikes_min: Optional[float]=.75, t_min: Optional[int]=10) -> pd.Series:
+    """ Create a mask for the DataFrame where rows between spikes are True and all other rows are False
+    Parameters
+    __________
+    df: pd.DataFrame
+        DataFrame to process
+    spikes_min: float
+        Minimum value for a spike to be considered
+    t_min: int
+        Minimum time between spikes for a section to be considered
+    
+    Returns
+    __________
+    pd.Series
+        Boolean Series where True indicates the rows between spikes
+    """
+
+    spike_detected = False
+    between_spikes = False
+    mask = pd.Series(False, index=df.index)
+    last_spike_end = None
+
+    for i in range(len(df.index)):
+        if abs(df.iloc[i]['acc_cmd']) > spikes_min:
+            spike_detected = True
+            if between_spikes and i - last_spike_end > t_min:
+                mask[last_spike_end:i] = True
+            between_spikes = False
+        else:
+            if spike_detected:
+                spike_detected = False
+                last_spike_end = i
+                between_spikes = True
+
+    return mask

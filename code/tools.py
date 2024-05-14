@@ -277,7 +277,7 @@ def save(fig: matplotlib.figure.Figure, fig_type: str, fname: Optional[str]=None
     fpath = f"{paths_plots[fig_type]}/{fname}"
     
     if os.path.exists(fpath):
-            check = input("File already exists. Overwrite? [y/n]: ")
+            check = input(f'File {fpath} exists. Overwrite? [y/n]: ')
             if check.lower() == 'n':
                 return
         
@@ -349,6 +349,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         ax.scatter(x_b, y_b, color=c2, label='Negative Acceleration', marker=marker2)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
+        ax.legend()
     
         if trend:
             # Add dashed trendline
@@ -372,7 +373,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c2)
             
     else:
-        ax.scatter(x_b, y_b, color=c1, label='Acceleration', marker=marker1)
+        ax.scatter(x_b, y_b, color=c1, marker=marker1)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
         
@@ -384,8 +385,8 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
             trend_data.extend([z_b[1], z_b[0], r_squared_b])
             p_b = np.poly1d(z_b)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c1)
-        
-    ax.legend()
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
     ax.grid(True)
     if not save_check:
         plt.show()
