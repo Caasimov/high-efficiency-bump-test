@@ -238,7 +238,7 @@ if __name__ == '__main__':
         # Plotting
         tools.plot_signal(df_main, save_check=True, fname=f"{TARGET}_{DOF}")
 
-        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, fsave_check=True, name=f"{TARGET}_{DOF}_sep")
+        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, save_check=True, name=f"{TARGET}_{DOF}_sep")
         trend_comb = tools.plot_IO(x, y, save_check=True, fname=f"{TARGET}_{DOF}_comb")
 
         tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], fname=f"{TARGET}_{DOF}")
