@@ -382,25 +382,24 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
                 z_b, _ = curve_fit(linear_func, x_b, y_b)
                 y_t_pred = linear_func(x_t, z_t[0])
                 y_b_pred = linear_func(x_b, z_b[0])
-                residuals_t = y_t - y_t_pred
-                residuals_b = y_b - y_b_pred
+                residuals_t = [np.sum(np.power(y_t - y_t_pred, 2))]
+                residuals_b = [np.sum(np.power(y_b - y_b_pred, 2))]
                 z_t  = np.array([z_t[0], 0])
                 z_b  = np.array([z_b[0], 0])
 
             else:
                 z_t, residuals_t, _, _, _ = np.polyfit(x_t, y_t, 1, full=True)
                 z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
-                residuals_t = residuals_t[0]
-                residuals_b = residuals_b[0]
                 
             p_t = np.poly1d(z_t)
             p_b = np.poly1d(z_b)
+
             # Calculate R^2
-            ss_res_t = residuals_t
+            ss_res_t = residuals_t[0]
             ss_tot_t = np.sum((y_t - np.mean(y_t))**2)
             r_squared_t = 1 - (ss_res_t / ss_tot_t)
             
-            ss_res_b = residuals_b
+            ss_res_b = residuals_b[0]
             ss_tot_b = np.sum((y_b - np.mean(y_b))**2)
             r_squared_b = 1 - (ss_res_b / ss_tot_b)
             
@@ -423,12 +422,12 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
             if fix_trend:
                 z_b, _ = curve_fit(linear_func, x_b, y_b)
                 y_b_pred = linear_func(x_b, z_b[0])
-                residuals_b = y_b - y_b_pred
+                residuals_b = [np.sum(np.power(y_b - y_b_pred, 2))]
                 z_b  = np.array([z_b[0], 0])
             else:
                 z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
-                residuals_b = residuals_b[0]
-            ss_res_b = residuals_b
+
+            ss_res_b = residuals_b[0]
             ss_tot_b = np.sum((y_b - np.mean(y_b))**2)
             r_squared_b = 1 - (ss_res_b / ss_tot_b)
 
