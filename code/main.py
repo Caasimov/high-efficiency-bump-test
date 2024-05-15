@@ -183,8 +183,9 @@ if __name__ == '__main__':
     sampling_rate = 100 # Hz
     
     #~! INPUTS !~#
-    TARGET = 'BUMP+' # 'AGARD-AR-144', 'MULTI-SINE', 'BUMP', 'BUMP+'
+    TARGET = 'AGARD-AR-144' # 'AGARD-AR-144', 'MULTI-SINE', 'BUMP', 'BUMP+'
     DOF = 'z'
+    fix_trend = True
 
     #~! PROCESSING !~#
     if TARGET == 'AGARD-AR-144':
@@ -210,14 +211,14 @@ if __name__ == '__main__':
         tools.plot_signal(df_main_A, save_check=True, fname=f"AGARD-AR-144_A_{DOF}")
         tools.plot_signal(df_main_B, save_check=True, fname=f"AGARD-AR-144_B+E_{DOF}")
 
-        trend_sep_A = tools.plot_IO(x_b_A, y_b_A, x_t_A, y_t_A, save_check=True, fname=f"AGARD-AR-144_A_{DOF}_sep")
-        trend_sep_B = tools.plot_IO(x_b_B, y_b_B, x_t_B, y_t_B, fname=f"AGARD-AR-144_B+E_{DOF}_sep")
+        trend_sep_A = tools.plot_IO(x_b_A, y_b_A, x_t_A, y_t_A, fix_trend=fix_trend, save_check=True, fname=f"AGARD-AR-144_A_{DOF}_sep")
+        trend_sep_B = tools.plot_IO(x_b_B, y_b_B, x_t_B, y_t_B, fix_trend=fix_trend, fname=f"AGARD-AR-144_B+E_{DOF}_sep")
 
-        trend_comb_A = tools.plot_IO(x_A, y_A, save_check=True, fname=f"AGARD-AR-144_A_{DOF}_comb")
-        trend_comb_B = tools.plot_IO(x_B, y_B, save_check=True, fname=f"AGARD-AR-144_B+E_{DOF}_comb")
+        trend_comb_A = tools.plot_IO(x_A, y_A, fix_trend=fix_trend, save_check=True, fname=f"AGARD-AR-144_A_{DOF}_comb")
+        trend_comb_B = tools.plot_IO(x_B, y_B, fix_trend=fix_trend, save_check=True, fname=f"AGARD-AR-144_B+E_{DOF}_comb")
 
-        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, save_check=True, fname=f"AGARD-AR-144_{DOF}_sep")
-        trend_comb = tools.plot_IO(x, y, save_check=True, fname=f"AGARD-AR-144_{DOF}_comb")
+        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, fix_trend=fix_trend, save_check=True, fname=f"AGARD-AR-144_{DOF}_sep")
+        trend_comb = tools.plot_IO(x, y, fix_trend=fix_trend, save_check=True, fname=f"AGARD-AR-144_{DOF}_comb")
 
         tools.plot_deBode(dfs_fft_A, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"AGARD-AR-144_A_{DOF}")
         tools.plot_deBode(dfs_fft_B, ['acc_cmd', 'acc_mes'], save_check=True, fname=f"AGARD-AR-144_B+E_{DOF}")
@@ -238,8 +239,8 @@ if __name__ == '__main__':
         # Plotting
         tools.plot_signal(df_main, save_check=True, fname=f"{TARGET}_{DOF}")
 
-        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, save_check=True, name=f"{TARGET}_{DOF}_sep")
-        trend_comb = tools.plot_IO(x, y, save_check=True, fname=f"{TARGET}_{DOF}_comb")
+        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, fix_trend=fix_trend, save_check=True, name=f"{TARGET}_{DOF}_sep")
+        trend_comb = tools.plot_IO(x, y, fix_trend=fix_trend, save_check=True, fname=f"{TARGET}_{DOF}_comb")
 
         tools.plot_deBode(dfs_fft, ['acc_cmd', 'acc_mes'], fname=f"{TARGET}_{DOF}")
 
@@ -253,8 +254,8 @@ if __name__ == '__main__':
         # Plotting
         tools.plot_signal(df_main, save_check=True, fname=f"{TARGET}_{DOF}")
 
-        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, save_check=True, fname=f"{TARGET}_{DOF}_sep")
-        trend_comb = tools.plot_IO(x, y, save_check=True, fname=f"{TARGET}_{DOF}_comb")
+        trend_sep = tools.plot_IO(x_b, y_b, x_t, y_t, fix_trend=fix_trend, save_check=True, fname=f"{TARGET}_{DOF}_sep")
+        trend_comb = tools.plot_IO(x, y, fix_trend=fix_trend, save_check=True, fname=f"{TARGET}_{DOF}_comb")
 
         postprocess('BUMP', trend_comb, trend_sep, save_check=True)
 
@@ -266,5 +267,5 @@ if __name__ == '__main__':
 
         for i, item in enumerate(data):
             x, y = item
-            trend = tools.plot_IO(x, y, save_check=True, fname=f"{names[i]}_{DOF}")
+            trend = tools.plot_IO(x, y, fix_trend=fix_trend, save_check=True, fname=f"{names[i]}_{DOF}")
             postprocess(names[i], trend, save_check=True)

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy.fftpack import fft, fftfreq
 from scipy.signal import find_peaks
+from scipy.optimize import curve_fit
 import matplotlib
 import matplotlib.pyplot as plt
 import h5py
@@ -255,6 +256,23 @@ class DataFramePlus(pd.DataFrame):
         """
         return np.mean(self[col1]) - np.mean(self[col2])
 
+def linear_func(x: float, m: float) -> float:
+    """ Linear function
+    
+    Parameters
+    __________
+    x: float
+        Independent variable
+    m: float
+        Slope of the line
+    
+    Returns
+    __________
+    float
+        Dependent variable
+    """
+    return m * x
+
 def save(fig: matplotlib.figure.Figure, fig_type: str, fname: Optional[str]=None) -> None:
     """ Save the figure
     
@@ -316,7 +334,7 @@ def plot_signal(df: pd.DataFrame, type: Optional[str]='acceleration', save_check
     else:
         save(fig, "signal", fname)
 
-def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional[List[float]]=None, trend: Optional[bool]=True, save_check: Optional[bool]=True, fname: Optional[str]=None) -> list:
+def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional[List[float]]=None, trend: Optional[bool]=True, fix_trend: Optional[bool]=False, save_check: Optional[bool]=True, fname: Optional[str]=None) -> list:
     """ Plot the input-output data
     
     Parameters
@@ -331,6 +349,8 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         List of output data for the top sine
     trend: bool
         Flag to plot the trendline
+    fix_trend: bool
+        Set y-intercept to 0
     save: bool
         Flag to save the plot
     fname: str
@@ -350,25 +370,44 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
         ax.legend()
+
+        x_t = np.array(x_t)
+        y_t = np.array(y_t)
+        x_b = np.array(x_b)
+        y_b = np.array(y_b)
     
         if trend:
-            # Add dashed trendline
-            z_t, residuals_t, _, _, _ = np.polyfit(x_t, y_t, 1, full=True)
+            if fix_trend:
+                z_t, _ = curve_fit(linear_func, x_t, y_t)
+                z_b, _ = curve_fit(linear_func, x_b, y_b)
+                y_t_pred = linear_func(x_t, z_t[0])
+                y_b_pred = linear_func(x_b, z_b[0])
+                residuals_t = y_t - y_t_pred
+                residuals_b = y_b - y_b_pred
+                z_t  = np.array([z_t[0], 0])
+                z_b  = np.array([z_b[0], 0])
+
+            else:
+                z_t, residuals_t, _, _, _ = np.polyfit(x_t, y_t, 1, full=True)
+                z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
+                residuals_t = residuals_t[0]
+                residuals_b = residuals_b[0]
+                
             p_t = np.poly1d(z_t)
-            z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
             p_b = np.poly1d(z_b)
-            
-            
             # Calculate R^2
-            ss_res_t = residuals_t[0]
+            ss_res_t = residuals_t
             ss_tot_t = np.sum((y_t - np.mean(y_t))**2)
             r_squared_t = 1 - (ss_res_t / ss_tot_t)
             
-            ss_res_b = residuals_b[0]
+            ss_res_b = residuals_b
             ss_tot_b = np.sum((y_b - np.mean(y_b))**2)
             r_squared_b = 1 - (ss_res_b / ss_tot_b)
             
+
             trend_data.extend([[z_t[1], z_t[0], r_squared_t], [z_b[1], z_b[0], r_squared_b]])
+
+
             ax.plot(x_t, p_t(x_t), ls=linestyle1, color=c1)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c2)
             
@@ -376,12 +415,23 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         ax.scatter(x_b, y_b, color=c1, marker=marker1)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
-        
+
+        x_b = np.array(x_b)
+        y_b = np.array(y_b)
+
         if trend:
-            z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
-            ss_res_b = residuals_b[0]
+            if fix_trend:
+                z_b, _ = curve_fit(linear_func, x_b, y_b)
+                y_b_pred = linear_func(x_b, z_b[0])
+                residuals_b = y_b - y_b_pred
+                z_b  = np.array([z_b[0], 0])
+            else:
+                z_b, residuals_b, _, _, _ = np.polyfit(x_b, y_b, 1, full=True)
+                residuals_b = residuals_b[0]
+            ss_res_b = residuals_b
             ss_tot_b = np.sum((y_b - np.mean(y_b))**2)
             r_squared_b = 1 - (ss_res_b / ss_tot_b)
+
             trend_data.extend([z_b[1], z_b[0], r_squared_b])
             p_b = np.poly1d(z_b)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c1)
