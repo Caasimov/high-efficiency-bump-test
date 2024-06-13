@@ -1,13 +1,16 @@
 ### CONSTANTS ###
+markers_all = ['x', '^', 'o', 's', 'D', 'v', 'p', 'h', '8', '<', '>', 'd', '*', '+', '|', '_', '.', ',']
+colors_all = ['blue', 'red', 'green', 'cyan', 'purple', 'orange', 'brown', 'pink', 'gray', 'olive', 'lime', 'teal', 'navy', 'maroon', 'gold', 'indigo', 'black', 'darkred', 'darkgreen', 'darkblue', 'darkorange', 'darkcyan', 'darkpurple', 'darkbrown', 'darkpink', 'darkgray', 'darkolive', 'darklime', 'darkteal', 'darknavy', 'darkmaroon', 'darkgold', 'darkindigo', 'darkblack', 'darkdarkred', 'darkdarkgreen', 'darkdarkblue', 'darkdarkorange', 'darkdarkcyan', 'darkdarkpurple', 'darkdarkbrown', 'darkdarkpink', 'darkdarkgray', 'darkdarkolive', 'darkdarklime', 'darkdarkteal', 'darkdarknavy', 'darkdarkmaroon', 'darkdarkgold', 'darkdarkindigo', 'darkdarkblack']
 
-c1 = 'blue'
-c2 = 'red'
-marker1 = 'x'
-marker2 = '^'
+c1 = colors_all[0]
+c2 = colors_all[1]
+
+marker1 = markers_all[0]
+marker2 = markers_all[1]
+
 linestyle1 = '--'
 figsize_default = (8, 5)
 figsize_deBode = (12, 8)
-
 ### FILEPATHS ###
 
 paths_hdf5_main = {

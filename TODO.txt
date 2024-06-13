@@ -1,3 +1,2 @@
-1. FFT -> isolate reversal bump harmonics -> sum X_i's & get magnitude -> get reference amplitude -> match per wavelength & plot in bump amplitude vs input amplitude plot
-
-2. Get R^2 for all trendlines.
+1. Add colors
+2. Separate bump+

@@ -292,14 +292,14 @@ def save(fig: matplotlib.figure.Figure, fig_type: str, fname: Optional[str]=None
     if not fname:
         fname = input("Enter file name: ")
         
-    fpath = f"{paths_plots[fig_type]}/{fname}"
+    fpath = f"{paths_plots[fig_type]}/{fname}.pdf"
     
     if os.path.exists(fpath):
             check = input(f'File {fpath} exists. Overwrite? [y/n]: ')
             if check.lower() == 'n':
                 return
         
-    fig.savefig(fpath)
+    fig.savefig(fpath, format="pdf", bbox_inches='tight')
     
 
 def plot_signal(df: pd.DataFrame, type: Optional[str]='acceleration', save_check: Optional[bool]=False, fname: Optional[str]=None) -> None:
@@ -334,7 +334,9 @@ def plot_signal(df: pd.DataFrame, type: Optional[str]='acceleration', save_check
     else:
         save(fig, "signal", fname)
 
-def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional[List[float]]=None, trend: Optional[bool]=True, fix_trend: Optional[bool]=False, save_check: Optional[bool]=True, fname: Optional[str]=None) -> list:
+def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional[List[float]]=None,
+            trend: Optional[bool]=True, fix_trend: Optional[bool]=False, freq_dep: Optional[bool]=True,
+            save_check: Optional[bool]=True, fname: Optional[str]=None) -> list:
     """ Plot the input-output data
     
     Parameters
@@ -351,6 +353,8 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
         Flag to plot the trendline
     fix_trend: bool
         Set y-intercept to 0
+    freq_dep: bool
+        Флаг для выключения/исключения частотно-зависимых точек на графике ввода-вывода.
     save: bool
         Flag to save the plot
     fname: str
@@ -365,17 +369,25 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     
     fig, ax = plt.subplots(1, 1, figsize=figsize_default)
     if x_t is not None or y_t is not None:
+        x_t = np.array(x_t)
+        y_t = np.array(y_t)
+        x_b = np.array(x_b)
+        y_b = np.array(y_b)
+
+        if not freq_dep:
+            mask_t = np.logical_or(np.logical_and(y_t>0.8, np.isclose(x_t, 3.00, atol=0.4)), np.logical_and(y_t>0.23, np.isclose(x_t, 0.3, atol=0.05)))
+            mask_b = np.logical_or(np.logical_and(y_b>0.8, np.isclose(x_b, 3.00, atol=0.4)), np.logical_and(y_b>0.23, np.isclose(x_b, 0.3, atol=0.05)))
+            x_t = x_t[~mask_t]
+            y_t = y_t[~mask_t]
+            x_b = x_b[~mask_b]
+            y_b = y_b[~mask_b]
+        
         ax.scatter(x_t, y_t, color=c1, label='Positive Acceleration', marker=marker1)
         ax.scatter(x_b, y_b, color=c2, label='Negative Acceleration', marker=marker2)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
         ax.legend()
-
-        x_t = np.array(x_t)
-        y_t = np.array(y_t)
-        x_b = np.array(x_b)
-        y_b = np.array(y_b)
-    
+            
         if trend:
             if fix_trend:
                 z_t, _ = curve_fit(linear_func, x_t, y_t)
@@ -406,17 +418,24 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
 
             trend_data.extend([[z_t[1], z_t[0], r_squared_t], [z_b[1], z_b[0], r_squared_b]])
 
-
+            x_t = np.sort(x_t)
+            x_b = np.sort(x_b)
+            
             ax.plot(x_t, p_t(x_t), ls=linestyle1, color=c1)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c2)
             
     else:
+        x_b = np.array(x_b)
+        y_b = np.array(y_b)
+
+        if not freq_dep:
+            mask = np.logical_or(np.logical_and(y_b>0.8, np.isclose(x_b, 3.00, atol=0.4)), np.logical_and(y_b>0.23, np.isclose(x_b, 0.3, atol=0.05)))
+            x_b = x_b[~mask]
+            y_b = y_b[~mask]
+
         ax.scatter(x_b, y_b, color=c1, marker=marker1)
         ax.set_xlabel('Input Amplitude [$m/s^2$]')
         ax.set_ylabel('Bump Magnitude [$m/s^2$]')
-
-        x_b = np.array(x_b)
-        y_b = np.array(y_b)
 
         if trend:
             if fix_trend:
@@ -433,6 +452,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
 
             trend_data.extend([z_b[1], z_b[0], r_squared_b])
             p_b = np.poly1d(z_b)
+            x_b = np.sort(x_b)
             ax.plot(x_b, p_b(x_b), ls=linestyle1, color=c1)
     ax.set_xlim(left=0)
     ax.set_ylim(bottom=0)
@@ -510,22 +530,60 @@ def plot_deBode(df_list: List[pd.DataFrame], cols: List[str], height: Optional[f
     else:
         save(fig, "deBode", fname)
 
-def plot_spectrum(df_list: List[pd.DataFrame], cols: List[str], save_check: Optional[bool]=True, fname: Optional[str]=None) -> None:
-    """ Plot the spectrum of a given signal seperated into its consituent wavelengths (post FFT)
+def plot_IO_full(x: List[list], y: List[list], plt_names: List[str], freq_dep: Optional[bool]=True, bump_isol: Optional[bool]=False, save_check: Optional[bool]=True, fname: Optional[str]=None) -> None:
+    """ Plot all input-output test data on the same plot
     
     Parameters
     __________
-    df_list: List[pd.DataFrame]
-        List of DataFrames containing the FFT results
-    cols: List[str]
-        cols[0] = X_f, cols[1] = Y_f
+    x: List[list]
+        List of input data
+    y: List[list]
+        List of output data
+    plt_names: List[str]
+        List of plot names
+    freq_dep: bool
+        Флаг для выключения/исключения частотно-зависимых точек на графике ввода-вывода
+    bump_isol: bool
+        Флаг для выключения/исключения точек только для БАМПа на графике ввода-вывода
     save_check: bool
         Flag to save the plot
     fname: str
         File name to save the plot
-        
+    
     Returns
     __________
     None
     """
-    pass
+    fig, ax = plt.subplots(1, 1, figsize=figsize_default)
+
+    for i, (xi, yi) in enumerate(zip(x, y)):
+        if bump_isol and i == 0:
+            continue
+
+        xi = np.array(xi)
+        yi = np.array(yi)
+
+        if not freq_dep and i==0:
+            mask = np.logical_or(np.logical_and(yi>0.8, np.isclose(xi, 3.00, atol=0.4)), np.logical_and(yi>0.23, np.isclose(xi, 0.3, atol=0.05)))
+            xi = xi[~mask]
+            yi = yi[~mask]
+
+        ax.scatter(xi, yi, color=colors_all[i], marker=markers_all[i], label=plt_names[i])
+        z, _, _, _, _ = np.polyfit(xi, yi, 1, full=True)
+        p = np.poly1d(z)
+        if not bump_isol:
+            xi = np.append(xi, 3.0)
+        xi = np.sort(xi)
+        ax.plot(xi, p(xi), ls=linestyle1, color=colors_all[i])
+
+    ax.set_xlabel('Input Amplitude [$m/s^2$]')
+    ax.set_ylabel('Bump Magnitude [$m/s^2$]')
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+    ax.legend()
+    ax.grid(True)
+
+    if not save_check:
+        plt.show()
+    else:
+        save(fig, "I/O", fname)

@@ -242,7 +242,7 @@ def zero_crossings(df: DataFramePlus, col: str) -> Tuple[list, list]:
     
     return crossings_idx, crossings_t
 
-def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=25) -> Tuple[list, list]:
+def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=1) -> Tuple[list, list]:
     """ Obtain bump magnitudes and corresponding input amplitudes
     
     Parameters
@@ -251,8 +251,8 @@ def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=25) -> 
         DataFrame containing the data
     tol: float
         Time tolerance for bump consideration
-    cutoff: float
-        Cutoff value for bump magnitude
+    cutoff: int
+        Number of standard deviations to consider a bump
     
     Returns
     __________
@@ -265,20 +265,40 @@ def bump_analysis(df: DataFramePlus, tol: float, cutoff: Optional[float]=25) -> 
     idx_0, t_0 = zero_crossings(df, 'vel_cmd')
     df['diff'] = df['acc_mes'] - df['acc_cmd']
     
+    # Group the data by similar acc_cmd values
+    grouped = df.groupby(np.round(df['acc_cmd'], 6))
+
     for idx, t in zip(idx_0, t_0):
         interval = df[(df['t'] >= (t - tol)) & (df['t'] <= (t + tol))]
         bump_max = interval['diff'].max()
         bump_min = interval['diff'].min()
-        if (((bump_max - bump_min)/abs(df.loc[idx, 'acc_cmd']))*100 <= cutoff) and abs(df.loc[idx, 'acc_cmd']) < .5:
-            if df.loc[idx, 'acc_cmd'] < 0:
-                bottom_sine.append([bump_max - bump_min, abs(df.loc[idx, 'acc_cmd'])])
+        bump_magnitude = bump_max - bump_min
+
+        
+        # Calculate the mean and standard deviation of the bump magnitudes for the current acc_cmd value
+        acc_cmd_value = np.round(df.loc[idx, 'acc_cmd'], 6)
+        if acc_cmd_value not in grouped.groups:
+            continue
+        group = grouped.get_group(acc_cmd_value)
+        mean_bump_magnitude = group['diff'].mean()
+        std_bump_magnitude = group['diff'].std()
+
+        # Automatically include the bump if the group size is two or fewer
+        if len(group) <= 2:
+            if df.loc[idx, 'acc_cmd'] > 0:
+                top_sine.append([np.abs(bump_magnitude), np.abs(df.loc[idx, 'acc_cmd'])])
             else:
-                top_sine.append([bump_max - bump_min, df.loc[idx, 'acc_cmd']])
+                bottom_sine.append([np.abs(bump_magnitude), np.abs(df.loc[idx, 'acc_cmd'])])
+        # Otherwise, only append the bump if it falls within the cutoff number of standard deviations from the mean
+        elif abs(bump_magnitude - mean_bump_magnitude) <= cutoff * std_bump_magnitude and abs(df.loc[idx, 'acc_cmd']) < .5:
+            if df.loc[idx, 'acc_cmd'] > 0:
+                top_sine.append([np.abs(bump_magnitude), np.abs(df.loc[idx, 'acc_cmd'])])
+            else:
+                bottom_sine.append([np.abs(bump_magnitude), np.abs(df.loc[idx, 'acc_cmd'])])
 
     return top_sine, bottom_sine
 
-
-def wavelength(df: DataFramePlus, l_bound: int, idx_zeros: list, time_stamps: List[tuple], phase_threshold: float, col='acc_cmd') -> Tuple[int, bool]:
+def wavelength(df: DataFramePlus, l_bound: int, idx_zeros: list, time_stamps: List[tuple], col='acc_cmd') -> Tuple[int, bool]:
     """ Determine if the column on a given interval is a wavelength
     
     Parameters
@@ -291,8 +311,6 @@ def wavelength(df: DataFramePlus, l_bound: int, idx_zeros: list, time_stamps: Li
         List of the indexes of zero crossings
     time_stamps: List[tuple]
         List of time stamps for pure signal
-    phase_threshold: float
-        Amplitude threshold for the phase
     col: str
         Column to process (default='acc_cmd')
     
@@ -303,7 +321,7 @@ def wavelength(df: DataFramePlus, l_bound: int, idx_zeros: list, time_stamps: Li
     """
     for i in range(len(idx_zeros) - 2):
         idx_check = round(idx_zeros[i] + (idx_zeros[i+1] - idx_zeros[i]) / 2)
-        if (idx_zeros[i] in df.index and idx_zeros[i+1] in df.index and idx_zeros[i+2] in df.index) and round(df.loc[idx_check, col], 3) != 0.0 and abs((df.loc[idx_zeros[i], col] - df.loc[idx_zeros[i], "acc_mes"])/df["acc_cmd"].max())*100 < phase_threshold:
+        if (idx_zeros[i] in df.index and idx_zeros[i+1] in df.index and idx_zeros[i+2] in df.index) and round(df.loc[idx_check, col], 3) != 0.0:
             start_t = df.loc[idx_zeros[i], 't']
             end_t = df.loc[idx_zeros[i+2], 't']
             for start, end in time_stamps:
