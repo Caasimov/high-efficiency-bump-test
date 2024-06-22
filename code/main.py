@@ -187,7 +187,7 @@ if __name__ == '__main__':
     sampling_rate = 100 # Hz
     
     #~! INPUTS !~#
-    TARGETS = ['MULTI-SINE']
+    TARGETS = ['MULTI-SINE'] # 'AGARD-AR-144', 'BUMP', 'BUMP+'
     DOF = 'z'
     fix_trend = False
     n_sigma = 2

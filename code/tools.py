@@ -1,15 +1,15 @@
 from __future__ import annotations
 import os
-import pandas as pd
+import pandas as pd # All data is stored in pandas DataFrames
 import numpy as np
 from scipy.fftpack import fft, fftfreq
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 import matplotlib
 import matplotlib.pyplot as plt
-import h5py
+import h5py 
 from typing import Callable, List, Tuple, Any, Union, Optional
-from tqdm import tqdm
+from tqdm import tqdm # Progress bar
 from config import *
 
 class DataFramePlus(pd.DataFrame):
@@ -37,9 +37,11 @@ class DataFramePlus(pd.DataFrame):
         
         with h5py.File(fpath, 'r') as f:
             if colidx is None:
+                # For command data
                 for col, path in colpaths.items():
                     self[col] = f[path][()]
             else:
+                # For measured data
                 for col, path in colpaths.items():
                     self[col] = f[path][()][:, colidx]
         
@@ -354,7 +356,7 @@ def plot_IO(x_b: list, y_b: list, x_t: Optional[List[float]]=None, y_t: Optional
     fix_trend: bool
         Set y-intercept to 0
     freq_dep: bool
-        Флаг для выключения/исключения частотно-зависимых точек на графике ввода-вывода.
+        Flag to include/exclude frequency-dependent points on the I/O plot
     save: bool
         Flag to save the plot
     fname: str
@@ -542,9 +544,9 @@ def plot_IO_full(x: List[list], y: List[list], plt_names: List[str], freq_dep: O
     plt_names: List[str]
         List of plot names
     freq_dep: bool
-        Флаг для выключения/исключения частотно-зависимых точек на графике ввода-вывода
+        Flag to include/exclude frequency-dependent points on the I/O plot
     bump_isol: bool
-        Флаг для выключения/исключения точек только для БАМПа на графике ввода-вывода
+        Flag to exclude/include points only for the bump on the I/O plot
     save_check: bool
         Flag to save the plot
     fname: str
